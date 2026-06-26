@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/collapsible';
 import { useAppSelector } from '@/hooks/useAppSelector';
 import { canAccessPath, getDefaultRoute } from '@/lib/rbac';
+import { CONTRACTOR_NAME } from '@/lib/constants';
 
 const mainNav = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
@@ -234,7 +235,7 @@ export function AppSidebar() {
             <Users className='h-4 w-4 text-primary' />
           </div>
           <span className='text-base font-semibold tracking-tight group-data-[collapsible=icon]:hidden'>
-            Enterprise Management
+            {CONTRACTOR_NAME}
           </span>
         </Link>
       </SidebarHeader>

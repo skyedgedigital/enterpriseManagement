@@ -189,7 +189,8 @@ export const EMPLOYEE_CODE_PREFIX = 'EMP';
 export const EMPLOYEE_CODE_DIGITS = 4;
 
 /** Contractor details shown on all CLM PDF forms (FORM XIX, XVI, etc.) */
-export const CONTRACTOR_NAME = import.meta.env.VITE_CONTRACTOR_NAME || '';
+export const CONTRACTOR_NAME =
+  import.meta.env.VITE_CONTRACTOR_NAME || 'Enterprise Management';
 export const CONTRACTOR_ADDRESS = import.meta.env.VITE_COMPANY_ADDRESS || '';
 export const CONTRACTOR_VENDOR_CODE =
   import.meta.env.VITE_CONTRACTOR_VENDOR_CODE || '';
