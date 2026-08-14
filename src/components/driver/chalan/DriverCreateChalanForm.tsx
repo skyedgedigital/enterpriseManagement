@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFieldArray, useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Plus, CircleX, Zap } from 'lucide-react';
@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { ChalanPhotoField } from '@/components/shared/ChalanPhotoField';
 import { fetchAdminDepartments } from '@/store/slices/admin/adminDepartmentSlice';
 import { fetchVehicles } from '@/store/slices/fleet-manager/vehicleSlice';
 import { fleetChalanService } from '@/services/fleet-manger/chalan.service';
@@ -66,7 +67,7 @@ export function DriverCreateChalanForm() {
   );
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [generatingChalanNumber, setGeneratingChalanNumber] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoFieldKey, setPhotoFieldKey] = useState(0);
 
   const form = useForm<ChalanFormInput, unknown, ChalanFormValues>({
     resolver: zodResolver(chalanFormSchema),
@@ -197,7 +198,7 @@ export function DriverCreateChalanForm() {
       });
       setWoUnits([]);
       setWorkOrderItems([]);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setPhotoFieldKey((k) => k + 1);
     } else {
       toast.error((result.payload as string) || 'Failed to create chalan');
     }
@@ -376,30 +377,26 @@ export function DriverCreateChalanForm() {
               />
             </div>
 
-            <div className='space-y-2'>
-              <Label>Chalan photo * (JPG / PNG, max 5 MB)</Label>
+            <div className='space-y-2 sm:col-span-2'>
+              <Label>Chalan photo *</Label>
+              <p className='text-xs text-muted-foreground'>
+                JPG or PNG, max 5 MB
+              </p>
               <Controller
                 name='file'
                 control={control}
-                render={({ field: { onChange, value: _v, ...rest } }) => (
-                  <Input
-                    {...rest}
-                    ref={fileInputRef}
-                    type='file'
-                    accept='image/jpeg,image/jpg,image/png'
-                    className='cursor-pointer'
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      onChange(f ?? undefined);
-                    }}
+                render={({ field: { onChange, value } }) => (
+                  <ChalanPhotoField
+                    key={photoFieldKey}
+                    value={value}
+                    onChange={onChange}
+                    error={
+                      errors.file ? String(errors.file.message) : undefined
+                    }
+                    disabled={saving}
                   />
                 )}
               />
-              {errors.file && (
-                <p className='text-sm text-destructive'>
-                  {String(errors.file.message)}
-                </p>
-              )}
             </div>
 
             <div className='space-y-2'>
