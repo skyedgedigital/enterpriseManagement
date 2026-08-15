@@ -380,7 +380,7 @@ export function DriverCreateChalanForm() {
             <div className='space-y-2 sm:col-span-2'>
               <Label>Chalan photo *</Label>
               <p className='text-xs text-muted-foreground'>
-                JPG or PNG, max 5 MB
+                JPG or PNG, max 10 MB
               </p>
               <Controller
                 name='file'

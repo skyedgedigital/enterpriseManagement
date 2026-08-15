@@ -12,5 +12,5 @@ export const FLEET_WO_PRESET_VALUES = new Set(
 );
 
 
-export const MAX_CHALAN_FILE_BYTES = 5_000_000;
+export const MAX_CHALAN_FILE_BYTES = 10_000_000;
 export const CHALAN_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png'] as const;

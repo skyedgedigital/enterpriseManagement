@@ -62,7 +62,7 @@ export function ChalanPhotoField({
     }
 
     if (file.size > MAX_CHALAN_FILE_BYTES) {
-      toast.error('File size must be 5 MB or less');
+      toast.error('File size must be 10 MB or less');
       clearInputs();
       return;
     }
