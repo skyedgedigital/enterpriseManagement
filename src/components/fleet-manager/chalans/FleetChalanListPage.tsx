@@ -51,7 +51,7 @@ export function FleetChalanListPage() {
   );
 
   const { items: departments } = useAppSelector((s) => s.adminDepartments);
-  console.log('departments', departments);
+  // console.log('departments', departments);
   const fleetWOs = useAppSelector((s) => s.fleetWorkOrders.items);
   const [deleteTarget, setDeleteTarget] = useState<Chalan | null>(null);
   const [query, setQuery] = useState('');

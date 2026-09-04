@@ -144,8 +144,8 @@ export const fleetChalanService = {
     const q = query(chalanCol(), orderBy('createdAt', 'desc'));
     const snap = await getDocs(q);
     const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Chalan);
-    console.log('All chalans data', data);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Chalan);
+    // console.log('All chalans data', data);
+    return data
   },
 
   async getById(id: string): Promise<Chalan> {
