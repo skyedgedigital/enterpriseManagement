@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { addDays, differenceInDays, format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 
 export function isFirestoreTimestamp(v: unknown): v is Timestamp {
@@ -31,4 +31,15 @@ export function formatTimestampLocale(
   const date = toDateSafe(ts);
   if (!date) return '—';
   return date.toLocaleDateString(locale, options);
+}
+
+/** this function checks if something is expiring within a month or has already expired */
+export function isExpiringWithinOneMonthOrHasExpired(ts?: unknown): boolean {
+  const date = toDateSafe(ts);
+  if (!date) return false;
+
+  const now = new Date();
+  const expiryLimit = addDays(now, 31);
+
+  return date <= expiryLimit;
 }

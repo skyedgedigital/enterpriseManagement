@@ -21,7 +21,10 @@ import { BulkUploadDialog } from '@/components/shared/BulkUploadDialog';
 import { ExportExcelButton } from '@/components/shared/ExportExcelButton';
 import { createVehicleBulkConfig } from '@/lib/excel/bulkUpload/fleetConfigs';
 import { vehicleExportConfig } from '@/lib/excel/bulkUpload/fleetExportConfigs';
-import { formatTimestamp } from '@/components/shared/utils';
+import {
+  formatTimestamp,
+  isExpiringWithinOneMonthOrHasExpired,
+} from '@/components/shared/utils';
 
 export function VehicleListPage() {
   const navigate = useNavigate();
@@ -45,6 +48,16 @@ export function VehicleListPage() {
     }
   };
 
+  const displayExpiryDate = (expiryDate: unknown) => {
+    const isExpiringSoon = isExpiringWithinOneMonthOrHasExpired(expiryDate);
+    const dateText = formatTimestamp(expiryDate);
+    return (
+      <span className={isExpiringSoon ? 'text-destructive' : ''}>
+        {dateText}
+      </span>
+    );
+  };
+
   const columns: Column<Vehicle>[] = [
     { key: 'vehicleNumber', header: 'Vehicle Number' },
     { key: 'vehicleType', header: 'Type' },
@@ -54,47 +67,47 @@ export function VehicleListPage() {
     {
       key: 'insuranceExpiryDate',
       header: 'Insurance Expiry',
-      render: (v) => formatTimestamp(v.insuranceExpiryDate),
+      render: (v) => displayExpiryDate(v.insuranceExpiryDate),
     },
     {
       key: 'pucExpiryDate',
       header: 'PUC Expiry',
-      render: (v) => formatTimestamp(v.pucExpiryDate),
+      render: (v) => displayExpiryDate(v.pucExpiryDate),
     },
     {
       key: 'gatePassExpiry',
       header: 'Gate Pass Expiry',
-      render: (v) => formatTimestamp(v.gatePassExpiry),
+      render: (v) => displayExpiryDate(v.gatePassExpiry),
     },
     {
       key: 'taxExpiryDate',
       header: 'Tax Expiry',
-      render: (v) => formatTimestamp(v.taxExpiryDate),
+      render: (v) => displayExpiryDate(v.taxExpiryDate),
     },
     {
       key: 'fitnessExpiry',
       header: 'Fitness Expiry',
-      render: (v) => formatTimestamp(v.fitnessExpiry),
+      render: (v) => displayExpiryDate(v.fitnessExpiry),
     },
     {
       key: 'loadTestExpiry',
       header: 'Load Test Expiry',
-      render: (v) => formatTimestamp(v.loadTestExpiry),
+      render: (v) => displayExpiryDate(v.loadTestExpiry),
     },
     {
       key: 'safetyExpiryDate',
       header: 'Safety Expiry',
-      render: (v) => formatTimestamp(v.safetyExpiryDate),
+      render: (v) => displayExpiryDate(v.safetyExpiryDate),
     },
   ];
 
   if (loading && items.length === 0) return <LoadingState />;
 
   return (
-    <div className='space-y-6'>
+    <div className="space-y-6">
       <PageHeader
-        title='Vehicles'
-        description='Manage fleet vehicles'
+        title="Vehicles"
+        description="Manage fleet vehicles"
         action={
           <div className="flex gap-2">
             <ExportExcelButton config={vehicleExportConfig} items={items} />
@@ -103,7 +116,7 @@ export function VehicleListPage() {
               onSuccess={() => dispatch(fetchVehicles())}
             />
             <Button onClick={() => navigate('/fleet-manager/vehicles/new')}>
-              <Plus className='h-4 w-4' />
+              <Plus className="h-4 w-4" />
               Add Vehicle
             </Button>
           </div>
@@ -112,11 +125,11 @@ export function VehicleListPage() {
 
       {items.length === 0 ? (
         <EmptyState
-          title='No vehicles'
-          description='Add your first vehicle to get started.'
+          title="No vehicles"
+          description="Add your first vehicle to get started."
           action={
             <Button onClick={() => navigate('/fleet-manager/vehicles/new')}>
-              <Plus className='h-4 w-4' />
+              <Plus className="h-4 w-4" />
               Add Vehicle
             </Button>
           }
@@ -125,29 +138,29 @@ export function VehicleListPage() {
         <DataTable
           data={items}
           columns={columns}
-          searchKey='vehicleNumber'
-          searchPlaceholder='Search by vehicle number...'
+          searchKey="vehicleNumber"
+          searchPlaceholder="Search by vehicle number..."
           actions={(vehicle) => (
             <>
               <Button
-                variant='ghost'
-                size='icon-sm'
+                variant="ghost"
+                size="icon-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/fleet-manager/vehicles/${vehicle.id}/edit`);
                 }}
               >
-                <Pencil className='h-4 w-4' />
+                <Pencil className="h-4 w-4" />
               </Button>
               <Button
-                variant='ghost'
-                size='icon-sm'
+                variant="ghost"
+                size="icon-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   setDeleteTarget(vehicle);
                 }}
               >
-                <Trash2 className='h-4 w-4 text-destructive' />
+                <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </>
           )}
