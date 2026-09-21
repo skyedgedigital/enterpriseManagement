@@ -1,4 +1,4 @@
-import { addDays, differenceInDays, format } from 'date-fns';
+import { addDays, format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 
 export function isFirestoreTimestamp(v: unknown): v is Timestamp {
