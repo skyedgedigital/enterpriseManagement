@@ -48,9 +48,9 @@ export function VehicleListPage() {
   const columns: Column<Vehicle>[] = [
     { key: 'vehicleNumber', header: 'Vehicle Number' },
     { key: 'vehicleType', header: 'Type' },
-    { key: 'fuelType', header: 'Fuel' },
+    // { key: 'fuelType', header: 'Fuel' },
     { key: 'location', header: 'Location' },
-    { key: 'vendor', header: 'Vendor' },
+    // { key: 'vendor', header: 'Vendor' },
     {
       key: 'insuranceExpiryDate',
       header: 'Insurance Expiry',
@@ -60,6 +60,31 @@ export function VehicleListPage() {
       key: 'pucExpiryDate',
       header: 'PUC Expiry',
       render: (v) => formatTimestamp(v.pucExpiryDate),
+    },
+    {
+      key: 'gatePassExpiry',
+      header: 'Gate Pass Expiry',
+      render: (v) => formatTimestamp(v.gatePassExpiry),
+    },
+    {
+      key: 'taxExpiryDate',
+      header: 'Tax Expiry',
+      render: (v) => formatTimestamp(v.taxExpiryDate),
+    },
+    {
+      key: 'fitnessExpiry',
+      header: 'Fitness Expiry',
+      render: (v) => formatTimestamp(v.fitnessExpiry),
+    },
+    {
+      key: 'loadTestExpiry',
+      header: 'Load Test Expiry',
+      render: (v) => formatTimestamp(v.loadTestExpiry),
+    },
+    {
+      key: 'safetyExpiryDate',
+      header: 'Safety Expiry',
+      render: (v) => formatTimestamp(v.safetyExpiryDate),
     },
   ];
 
