@@ -8,16 +8,24 @@ import type {
   EnterpriseInfo,
 } from '@/types';
 import { fleetWorkOrderService } from '@/services/fleet-manger/workOrder.service';
+import {
+  CONTRACTOR_ADDRESS,
+  CONTRACTOR_EMAIL,
+  CONTRACTOR_GSTIN,
+  CONTRACTOR_NAME,
+  CONTRACTOR_PAN,
+  CONTRACTOR_VENDOR_CODE,
+} from '../constants';
 
 // ── Enterprise dummy data (baad mein slice se aayega) ──
 export const DUMMY_ENTERPRISE: EnterpriseInfo = {
-  name: 'Enterprises Management',
-  address: 'Sonari, Jamshedpur 831011',
-  mobile: '6754133471, 9984973465',
-  email: 'enterprisemanagement@gmail.com',
-  gstin: '20XXXXX1234X1ZX',
-  pan: 'XXXXX1234X',
-  vendorCode: 'V-1234',
+  name: CONTRACTOR_NAME,
+  address: CONTRACTOR_ADDRESS,
+  mobile: '',
+  email: CONTRACTOR_EMAIL,
+  gstin: CONTRACTOR_GSTIN,
+  pan: CONTRACTOR_PAN,
+  vendorCode: CONTRACTOR_VENDOR_CODE,
 };
 
 // ── Invoice year string e.g. "2024-25" ──
