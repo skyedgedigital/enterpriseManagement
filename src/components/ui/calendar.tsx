@@ -19,7 +19,7 @@ function Calendar({
   showOutsideDays = true,
   captionLayout = 'dropdown',
   buttonVariant = 'ghost',
-  startMonth = new Date(1990, 0),
+  startMonth = new Date(1950, 0),
   endMonth = new Date(2050, 11),
   formatters,
   components,
