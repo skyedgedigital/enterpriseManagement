@@ -29,7 +29,7 @@ export function PersonalInfoTab({ isNewEmployee }: PersonalInfoTabProps) {
         <div className="space-y-2">
           <Label htmlFor="code">Employee Code *</Label>
           <Input id="code" {...register("code")} readOnly={isNewEmployee} className={isNewEmployee ? "bg-muted" : undefined} />
-          {isNewEmployee && <p className="text-xs text-muted-foreground">System-generated (EMP + 4 digits)</p>}
+          {isNewEmployee && <p className="text-xs text-muted-foreground">Assigned when the employee is saved</p>}
           {errors.code && <p className="text-sm text-destructive">{errors.code.message}</p>}
         </div>
         <div className="space-y-2">
