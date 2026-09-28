@@ -48,6 +48,12 @@ export const designationSchema = z.object({
 });
 export type DesignationFormValues = z.infer<typeof designationSchema>;
 
+export function normalizeIfsc(value: string): string {
+  return value.replace(/\s+/g, '').toUpperCase();
+}
+
+const IFSC_PATTERN = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+
 export const bankSchema = z.object({
   name: z
     .string()
@@ -59,7 +65,14 @@ export const bankSchema = z.object({
   ifsc: z
     .string()
     .min(1, 'IFSC is required')
-    .max(11, 'IFSC must be 11 characters'),
+    .transform((v) => normalizeIfsc(v))
+    .refine((v) => v.length === 11, {
+      message: 'IFSC must be 11 characters',
+    })
+    .refine((v) => IFSC_PATTERN.test(v), {
+      message:
+        'IFSC must be 4 letters, 0, then 6 letters or digits (e.g. SBIN0001234)',
+    }),
 });
 export type BankFormValues = z.infer<typeof bankSchema>;
 
