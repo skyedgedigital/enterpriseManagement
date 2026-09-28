@@ -41,11 +41,11 @@ export interface BonusChecklistData {
   rows: BonusChecklistRow[];
 }
 
-/** Per-month and year-end sums for the footer row (amounts are net wages only; arrear is separate). */
+/** Per-month and year-end sums for the footer row (amounts are gross wages only; arrear is separate). */
 export interface BonusChecklistFooterTotals {
   perMonth: { days: number; amount: number }[];
   sumArrear: number;
-  /** Sum of all monthly net amounts in the grid (excludes arrear). */
+  /** Sum of all monthly gross amounts in the grid (excludes arrear). */
   sumPaidExcludingArrear: number;
   sumDaysWorkedYear: number;
 }
@@ -221,7 +221,7 @@ export function buildBonusChecklistData({
       });
 
       const days = slip.daysWorked;
-      const amount = slip.netAmountPaid;
+      const amount = slip.grossWages;
       months.push({ year, month, label, days, amount });
       daysWorkedYear += days;
       sumAmount += amount;
