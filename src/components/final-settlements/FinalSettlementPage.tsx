@@ -4,8 +4,9 @@ import { Plus, Pencil, Trash2, Save, Loader2 } from "lucide-react";
 
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
-import { fetchFinalSettlements, addFinalSettlement, updateFinalSettlement, deleteFinalSettlement } from "@/store/slices/finalSettlementSlice";
+import { addFinalSettlement, updateFinalSettlement, deleteFinalSettlement } from "@/store/slices/finalSettlementSlice";
 import { fetchEmployees } from "@/store/slices/employeeSlice";
+import { useDebouncedCollectionSearch } from "@/hooks/useDebouncedCollectionSearch";
 import type { FinalSettlement, Bonus, Leave } from "@/types";
 
 import { Button } from "@/components/ui/button";
@@ -21,14 +22,24 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { DataTable, type Column } from "@/components/shared/DataTable";
-import { DeleteDialog } from "@/components/shared/DeleteDialog";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { DataTable, type Column } from "@/components/shared/DataTable";
+import { DeleteDialog } from "@/components/shared/DeleteDialog";
 
 export function FinalSettlementPage() {
   const dispatch = useAppDispatch();
-  const { items, loading } = useAppSelector((state) => state.finalSettlements);
+  const { loading } = useAppSelector((state) => state.finalSettlements);
+  const {
+    query,
+    setQuery,
+    items,
+    allItems,
+    initialLoading,
+    searchLoading,
+    removeResult,
+    reloadAll,
+  } = useDebouncedCollectionSearch<FinalSettlement>("finalSettlements");
   const employees = useAppSelector((state) => state.employees.items);
   const [deleteTarget, setDeleteTarget] = useState<FinalSettlement | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -43,7 +54,6 @@ export function FinalSettlementPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchFinalSettlements());
     dispatch(fetchEmployees());
   }, [dispatch]);
 
@@ -75,11 +85,19 @@ export function FinalSettlementPage() {
 
     if (editing) {
       const result = await dispatch(updateFinalSettlement({ id: editing.id, data: payload }));
-      if (updateFinalSettlement.fulfilled.match(result)) { toast.success("Settlement updated"); setDialogOpen(false); }
+      if (updateFinalSettlement.fulfilled.match(result)) {
+        toast.success("Settlement updated");
+        setDialogOpen(false);
+        void reloadAll();
+      }
       else toast.error(result.payload as string);
     } else {
       const result = await dispatch(addFinalSettlement(payload));
-      if (addFinalSettlement.fulfilled.match(result)) { toast.success("Settlement created"); setDialogOpen(false); }
+      if (addFinalSettlement.fulfilled.match(result)) {
+        toast.success("Settlement created");
+        setDialogOpen(false);
+        void reloadAll();
+      }
       else toast.error(result.payload as string);
     }
     setSaving(false);
@@ -88,7 +106,11 @@ export function FinalSettlementPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const result = await dispatch(deleteFinalSettlement(deleteTarget.id));
-    if (deleteFinalSettlement.fulfilled.match(result)) { toast.success("Settlement deleted"); setDeleteTarget(null); }
+    if (deleteFinalSettlement.fulfilled.match(result)) {
+      toast.success("Settlement deleted");
+      removeResult(deleteTarget.id);
+      setDeleteTarget(null);
+    }
     else toast.error(result.payload as string);
   };
 
@@ -98,27 +120,41 @@ export function FinalSettlementPage() {
     { key: "leave", header: "Leave", render: (s) => `${s.leave?.length ?? 0} records` },
   ];
 
-  if (loading && items.length === 0) return <LoadingState />;
+  if (initialLoading && allItems.length === 0) return <LoadingState />;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Final Settlements"
-        description="Manage employee exit settlements"
+        description={
+          query.trim()
+            ? `${items.length} match${items.length !== 1 ? "es" : ""}`
+            : `${allItems.length} settlement${allItems.length !== 1 ? "s" : ""} total`
+        }
         action={<Button onClick={openCreate}><Plus className="h-4 w-4" /> Add Settlement</Button>}
       />
 
-      {items.length === 0 ? (
-        <EmptyState title="No settlements" description="Create a final settlement record." action={<Button onClick={openCreate}><Plus className="h-4 w-4" /> Add Settlement</Button>} />
-      ) : (
-        <DataTable data={items} columns={columns} searchKey="employee" searchPlaceholder="Search..."
-          actions={(item) => (
-            <>
-              <Button variant="ghost" size="icon-sm" onClick={(e) => { e.stopPropagation(); openEdit(item); }}><Pencil className="h-4 w-4" /></Button>
-              <Button variant="ghost" size="icon-sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-            </>
-          )}
+      {allItems.length === 0 ? (
+        <EmptyState
+          title="No settlements"
+          description="Create your first final settlement."
+          action={<Button onClick={openCreate}><Plus className="h-4 w-4" /> Add Settlement</Button>}
         />
+      ) : (
+      <DataTable
+        data={items}
+        columns={columns}
+        searchPlaceholder="Search by employee name or code..."
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchLoading={searchLoading}
+        actions={(item) => (
+          <>
+            <Button variant="ghost" size="icon-sm" onClick={(e) => { e.stopPropagation(); openEdit(item); }}><Pencil className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon-sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+          </>
+        )}
+      />
       )}
 
       {/* Create/Edit Dialog */}

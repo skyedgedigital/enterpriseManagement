@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Search } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -27,6 +27,10 @@ interface DataTableProps<T> {
   /** Search any of these string columns (substring match). */
   searchKeys?: (keyof T)[];
   searchPlaceholder?: string;
+  /** Remote search: skip client filter and always show the search box. */
+  onSearchChange?: (value: string) => void;
+  searchValue?: string;
+  searchLoading?: boolean;
   onRowClick?: (item: T) => void;
   pageSize?: number;
   actions?: (item: T) => React.ReactNode;
@@ -38,12 +42,17 @@ export function DataTable<T extends { id: string }>({
   searchKey,
   searchKeys,
   searchPlaceholder = "Search...",
+  onSearchChange,
+  searchValue,
+  searchLoading = false,
   onRowClick,
   pageSize = 10,
   actions,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const remote = onSearchChange != null;
+  const inputValue = remote ? (searchValue ?? search) : search;
 
   const activeSearchKeys = useMemo(() => {
     if (searchKeys && searchKeys.length > 0) return searchKeys;
@@ -51,7 +60,10 @@ export function DataTable<T extends { id: string }>({
     return [] as (keyof T)[];
   }, [searchKey, searchKeys]);
 
+  const showSearch = remote || activeSearchKeys.length > 0;
+
   const filteredData = useMemo(() => {
+    if (remote) return data;
     const q = search.trim().toLowerCase();
     if (!q || activeSearchKeys.length === 0) return data;
     return data.filter((item) =>
@@ -63,7 +75,7 @@ export function DataTable<T extends { id: string }>({
         );
       }),
     );
-  }, [data, search, activeSearchKeys]);
+  }, [data, search, activeSearchKeys, remote]);
 
   const totalPages = Math.ceil(filteredData.length / pageSize);
   const paginatedData = filteredData.slice(
@@ -71,20 +83,37 @@ export function DataTable<T extends { id: string }>({
     (page + 1) * pageSize
   );
 
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(filteredData.length / pageSize) - 1);
+    if (page > maxPage) setPage(maxPage);
+  }, [filteredData.length, pageSize, page]);
+
+  const emptyMessage =
+    remote && searchLoading
+      ? "Searching…"
+      : remote && !inputValue.trim()
+        ? "Type to search."
+        : "No results found.";
+
   return (
     <div className="space-y-4">
-      {activeSearchKeys.length > 0 && (
+      {showSearch && (
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={searchPlaceholder}
-            value={search}
+            value={inputValue}
             onChange={(e) => {
-              setSearch(e.target.value);
+              const next = e.target.value;
+              setSearch(next);
               setPage(0);
+              onSearchChange?.(next);
             }}
-            className="pl-9"
+            className="pl-9 pr-9"
           />
+          {searchLoading && (
+            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          )}
         </div>
       )}
 
@@ -108,7 +137,7 @@ export function DataTable<T extends { id: string }>({
                   colSpan={columns.length + (actions ? 1 : 0)}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  No results found.
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             ) : (
