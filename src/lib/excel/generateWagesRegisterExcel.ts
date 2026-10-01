@@ -1,3 +1,4 @@
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { WagesPaySlipData } from "@/components/pdf/WagesPaySlipPDF";
 import {
@@ -81,6 +82,20 @@ export async function generateWagesRegisterExcel(
       }
     }
   }
+
+  finishReportTable(sheet, 4, 3 + slips.length, [
+    { column: 4, kind: "days" },
+    { column: 5, kind: "rate" },
+    { column: 6, kind: "rate" },
+    { column: 7, kind: "money" },
+    { column: 8, kind: "money" },
+    { column: 9, kind: "money" },
+    { column: 10, kind: "money" },
+    { column: 13, kind: "money" },
+    { column: 11, kind: "wholeMoney" },
+    { column: 12, kind: "wholeMoney" },
+    { column: 14, kind: "wholeMoney" },
+  ], 4 + slips.length, 2);
 
   await downloadExcel(workbook, reportFileName("WagesRegister", month, year));
 }

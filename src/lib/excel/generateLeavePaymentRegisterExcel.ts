@@ -1,3 +1,5 @@
+import { leavePaymentColumns } from "@/lib/reportPolicy";
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { LeavePaymentRegisterData } from "@/lib/buildLeavePaymentRegisterData";
 import {
@@ -7,7 +9,7 @@ import {
   HEADER_STYLE,
   RIGHT_CELL_STYLE,
 } from "@/lib/excelUtils";
-import { formatMoney2, formatMoneyWhole } from "@/lib/moneyRounding";
+import { formatMoney2 } from "@/lib/moneyRounding";
 
 const THIN = {
   top: { style: "thin" as const },
@@ -185,7 +187,7 @@ export async function generateLeavePaymentRegisterExcel(
   let r = 14;
   data.rows.forEach((row, idx) => {
     const leaveCell =
-      `Cl  ${formatMoneyWhole(row.daysCl)}\nEl  ${formatMoneyWhole(row.daysEl)}\nFl  ${formatMoneyWhole(row.daysFl)}\n———\n${formatMoneyWhole(row.daysLeaveTotal)}`;
+      `Cl  ${formatMoney2(row.daysCl)}\nEl  ${formatMoney2(row.daysEl)}\nFl  ${formatMoney2(row.daysFl)}\n———\n${formatMoney2(row.daysLeaveTotal)}`;
     const rateCell =
       `${formatMoney2(row.basicRate)}\n${formatMoney2(row.daRate)}\n———\n${formatMoney2(row.rateTotal)}`;
 
@@ -197,15 +199,15 @@ export async function generateLeavePaymentRegisterExcel(
       leaveCell,
       "",
       rateCell,
-      formatMoney2(row.sumBasicWages),
-      formatMoney2(row.sumDa),
-      formatMoney2(row.sumOvertime),
-      formatMoneyWhole(row.sumOtherCashPayment),
-      formatMoney2(row.sumTotalWages),
-      formatMoneyWhole(row.sumPf),
-      formatMoneyWhole(row.sumEsi),
-      formatMoneyWhole(row.sumOthersDeduction),
-      formatMoneyWhole(row.sumNetPaid),
+      row.sumBasicWages,
+      row.sumDa,
+      row.sumOvertime,
+      row.sumOtherCashPayment,
+      row.sumTotalWages,
+      row.sumPf,
+      row.sumEsi,
+      row.sumOthersDeduction,
+      row.sumNetPaid,
       "",
       "",
       row.remarks ?? "",
@@ -254,5 +256,10 @@ export async function generateLeavePaymentRegisterExcel(
                 : 9,
   }));
 
+  finishReportTable(sheet, 14, r - 1, leavePaymentColumns.map((column, index) => ({ column: index + 1, kind: column.kind })), r);
+  const leaveTotals = data.rows.reduce((t, row) => [t[0] + row.daysCl, t[1] + row.daysEl, t[2] + row.daysFl, t[3] + row.daysLeaveTotal], [0,0,0,0]);
+  sheet.getCell(r, 5).value = 'Cl ' + leaveTotals[0] + '\nEl ' + leaveTotals[1] + '\nFl ' + leaveTotals[2] + '\nTotal ' + leaveTotals[3];
+  sheet.getRow(r).height = 48;
+  sheet.getCell(r, 5).alignment = { wrapText: true };
   await downloadExcel(workbook, `${filePrefix}_${data.calendarYear}.xlsx`);
 }

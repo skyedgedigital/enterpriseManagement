@@ -372,15 +372,15 @@ export function BonusChecklistPDF({ data, documentTitle }: BonusChecklistPDFProp
                   const t = footer.perMonth[mi] ?? { days: 0, amount: 0 };
                   return (
                     <View key={`ft-d-${mi}`} style={[s.cell, s.colMo, s.cellNumericStack, s.cellMonth]}>
-                      <Text style={s.monthText}>{fmtDays(t.days)}</Text>
+                      <Text style={s.monthText}>{fmtDays(t.days)}{"\n"}{fmtAmountGrouped(t.amount)}</Text>
                     </View>
                   );
                 })}
                 <View style={[s.cell, s.colAr, s.cellNumericStack]}>
-                  <Text style={s.monthText}> </Text>
+                  <Text style={s.monthText}>{fmtAmountGrouped(footer.sumArrear)}</Text>
                 </View>
                 <View style={[s.cell, s.colTot, s.cellNumericStack]}>
-                  <Text style={s.monthText}> </Text>
+                  <Text style={s.monthText}>{fmtAmountGrouped(footer.sumPaidExcludingArrear + footer.sumArrear)}</Text>
                 </View>
                 <View style={[s.cell, s.colPr, s.cellNumericStack]}>
                   <Text style={s.monthText}> </Text>

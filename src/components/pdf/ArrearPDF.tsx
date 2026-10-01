@@ -1,3 +1,6 @@
+import { ReportTotalsRow } from "./ReportTotalsRow";
+import { wageRegisterColumns, signingWidths, SIGNING } from "@/lib/reportPolicy";
+import { formatMoney2, formatMoneyWhole } from "@/lib/moneyRounding";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { CONTRACTOR_ADDRESS, CONTRACTOR_NAME } from "@/lib/constants";
 
@@ -29,30 +32,10 @@ interface Props {
   toYear: number;
 }
 
-const COL = {
-  sl: "3%",
-  name: "9%",
-  serial: "5.5%",
-  desig: "7%",
-  days: "4%",
-  units: "3.5%",
-  rate: "6%",
-  basic: "5%",
-  da: "5%",
-  ot: "4%",
-  otherCash: "6%",
-  total: "5%",
-  esi: "4%",
-  pf: "4%",
-  othDed: "4%",
-  amtPaid: "5.5%",
-  thumb: "7%",
-  initial: "6%",
-  sign: "6.5%",
-};
-
-const WAGES_GROUP_W = "25%";
-const DEDUCTION_GROUP_W = "12%";
+const WIDTHS = signingWidths([3,9,5.5,7,4,3.5,6,5,5,4,6,5,4,4,4,5.5,7,6,6.5], 819.89, [16,18], [17]);
+const COL = Object.fromEntries(["sl","name","serial","desig","days","units","rate","basic","da","ot","otherCash","total","esi","pf","othDed","amtPaid","thumb","initial","sign"].map((key, i) => [key, WIDTHS[i]])) as Record<string, number>;
+const WAGES_GROUP_W = WIDTHS.slice(7,12).reduce((a,b)=>a+b,0);
+const DEDUCTION_GROUP_W = WIDTHS.slice(12,15).reduce((a,b)=>a+b,0);
 
 const s = StyleSheet.create({
   page: {
@@ -93,7 +76,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#e5e5e5",
     fontFamily: "Helvetica-Bold",
-    minHeight: 40,
+    minHeight: 64,
     borderBottomWidth: 0.5,
     borderColor: "#000",
   },
@@ -146,6 +129,7 @@ const s = StyleSheet.create({
   },
 
   dataRow: {
+    minHeight: SIGNING.rowHeight,
     flexDirection: "row",
     borderBottomWidth: 0.5,
     borderColor: "#000",
@@ -159,9 +143,7 @@ const s = StyleSheet.create({
   cRight: { textAlign: "right" },
 });
 
-function rounded(n: number | null | undefined): string {
-  return String(Math.round(n ?? 0));
-}
+
 
 export function ArrearPDF({
   rows,
@@ -211,6 +193,7 @@ export function ArrearPDF({
         <Text style={s.period}>Wages Period {periodLabel}</Text>
 
         <View style={s.table}>
+          <View fixed wrap={false}>
           <View style={s.hdrRow}>
             <View style={[s.hdrCell, { width: COL.sl }]}>
               <Text style={s.hdrText}>Sl. No.</Text>
@@ -239,22 +222,22 @@ export function ArrearPDF({
             <View style={[s.grp, { width: WAGES_GROUP_W }]}>
               <Text style={s.grpTitle}>AMOUNT OF WAGES EARNED</Text>
               <View style={s.grpSubs}>
-                <View style={[s.subCell, { width: "20%" }]}>
+                <View style={[s.subCell, { width: `${WIDTHS[7] / WIDTHS.slice(7,12).reduce((a,b)=>a+b,0) * 100}%` }]}>
                   <Text style={s.hdrText}>Basic Wages</Text>
                 </View>
-                <View style={[s.subCell, { width: "20%" }]}>
+                <View style={[s.subCell, { width: `${WIDTHS[8] / WIDTHS.slice(7,12).reduce((a,b)=>a+b,0) * 100}%` }]}>
                   <Text style={s.hdrText}>Dearness Allowance</Text>
                 </View>
-                <View style={[s.subCell, { width: "16%" }]}>
+                <View style={[s.subCell, { width: `${WIDTHS[9] / WIDTHS.slice(7,12).reduce((a,b)=>a+b,0) * 100}%` }]}>
                   <Text style={s.hdrText}>Overtime</Text>
                 </View>
-                <View style={[s.subCell, { width: "24%" }]}>
+                <View style={[s.subCell, { width: `${WIDTHS[10] / WIDTHS.slice(7,12).reduce((a,b)=>a+b,0) * 100}%` }]}>
                   <Text style={s.hdrText}>
                     Other Cash payment (nature of payment to be indicated)
                   </Text>
                 </View>
                 <View
-                  style={[s.subCell, { width: "20%", borderRightWidth: 0 }]}
+                  style={[s.subCell, { width: `${WIDTHS[11] / WIDTHS.slice(7,12).reduce((a,b)=>a+b,0) * 100}%`, borderRightWidth: 0 }]}
                 >
                   <Text style={s.hdrText}>Total</Text>
                 </View>
@@ -329,9 +312,11 @@ export function ArrearPDF({
             </Text>
           </View>
 
+          </View>
           {rows.map((row, idx) => (
             <View
               key={`${row.workmanNo}-${row.employeeName}-${idx}`}
+              wrap={false}
               style={s.dataRow}
             >
               <Text style={[s.cell, { width: COL.sl }, s.cCenter]}>
@@ -353,32 +338,32 @@ export function ArrearPDF({
                 —
               </Text>
               <Text style={[s.cell, { width: COL.rate }, s.cCenter]}>
-                {rounded(row.basicRate)}+{rounded(row.daRate)}
+                {formatMoney2(row.basicRate + row.daRate)}
               </Text>
               <Text style={[s.cell, { width: COL.basic }, s.cRight]}>
-                {rounded(row.basicAmount)}
+                {formatMoney2(row.basicAmount)}
               </Text>
               <Text style={[s.cell, { width: COL.da }, s.cRight]}>
-                {rounded(row.daAmount)}
+                {formatMoney2(row.daAmount)}
               </Text>
-              <Text style={[s.cell, { width: COL.ot }, s.cRight]}>0</Text>
+              <Text style={[s.cell, { width: COL.ot }, s.cRight]}>0.00</Text>
               <Text style={[s.cell, { width: COL.otherCash }, s.cRight]}>
-                {rounded(row.otherCash)}
+                {formatMoney2(row.otherCash)}
               </Text>
               <Text style={[s.cell, { width: COL.total }, s.cRight]}>
-                {rounded(row.grossWages)}
+                {formatMoney2(row.grossWages)}
               </Text>
               <Text style={[s.cell, { width: COL.esi }, s.cRight]}>
-                {rounded(row.esi)}
+                {formatMoneyWhole(row.esi)}
               </Text>
               <Text style={[s.cell, { width: COL.pf }, s.cRight]}>
-                {rounded(row.pf)}
+                {formatMoneyWhole(row.pf)}
               </Text>
               <Text style={[s.cell, { width: COL.othDed }, s.cRight]}>
-                {rounded(row.otherDeduction)}
+                {formatMoney2(row.otherDeduction)}
               </Text>
               <Text style={[s.cell, { width: COL.amtPaid }, s.cRight]}>
-                {rounded(row.netAmountPaid)}
+                {formatMoneyWhole(row.netAmountPaid)}
               </Text>
               <Text style={[s.cell, { width: COL.thumb }]} />
               <Text style={[s.cell, { width: COL.initial }]} />
@@ -390,6 +375,7 @@ export function ArrearPDF({
               />
             </View>
           ))}
+          <ReportTotalsRow rows={rows} columns={wageRegisterColumns} widths={Object.values(COL)} />
         </View>
       </Page>
     </Document>

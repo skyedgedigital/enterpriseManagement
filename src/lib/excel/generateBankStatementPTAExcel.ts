@@ -1,3 +1,4 @@
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { BankStatementPTAData } from "@/components/pdf/BankStatementPTAPDF";
 import {
@@ -63,6 +64,10 @@ export async function generateBankStatementPTAExcel(data: BankStatementPTAData):
     sheet.getCell(r, 2).style = { ...sheet.getCell(r, 2).style, ...RIGHT_CELL_STYLE };
     sheet.getCell(r, 6).style = { ...sheet.getCell(r, 6).style, ...RIGHT_CELL_STYLE };
   }
+
+  finishReportTable(sheet, 4, 3 + data.rows.length, [
+    { column: 6, kind: "wholeMoney" },
+  ], 4 + data.rows.length, 5);
 
   await downloadExcel(workbook, reportFileName("BankStatementPTA", data.month, data.year));
 }

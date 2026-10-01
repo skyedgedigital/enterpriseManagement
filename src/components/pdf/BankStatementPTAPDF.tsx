@@ -174,7 +174,7 @@ function PTALetterPage({
       </View>
 
       <View style={s.letterTableSection}>
-        <StatementTable rows={rows} />
+        <StatementTable rows={rows} totalAmount={data.rows.length <= FIRST_PAGE_ROWS ? data.totalAmount : undefined} />
       </View>
     </Page>
   );
@@ -192,7 +192,7 @@ const MONTH_LABELS: Record<number, string> = {
 const FIRST_PAGE_ROWS = 16;
 const ROWS_PER_PAGE = 30;
 
-function StatementTable({ rows }: { rows: BankStatementPTARow[] }) {
+function StatementTable({ rows, totalAmount }: { rows: BankStatementPTARow[]; totalAmount?: number }) {
   return (
     <View style={s.table}>
       <View style={s.tableHeaderRow}>
@@ -213,17 +213,21 @@ function StatementTable({ rows }: { rows: BankStatementPTARow[] }) {
           <Text style={s.bodyCellAmount}>{formatAmount(row.netAmount)}</Text>
         </View>
       ))}
+      {totalAmount !== undefined && <View style={s.tableBodyRow} wrap={false}>
+        <Text style={s.bodyCellSlNo} /><Text style={s.bodyCellWM} /><Text style={s.bodyCellName}>Total</Text>
+        <Text style={s.bodyCellAccount} /><Text style={s.bodyCellIfsc} /><Text style={s.bodyCellAmount}>{formatAmount(totalAmount)}</Text>
+      </View>}
     </View>
   );
 }
 
-function TablePage({ rows, pageIndex }: { rows: BankStatementPTARow[]; pageIndex: number }) {
+function TablePage({ rows, pageIndex, totalAmount }: { rows: BankStatementPTARow[]; pageIndex: number; totalAmount?: number }) {
   const start = pageIndex * ROWS_PER_PAGE;
   const pageRows = rows.slice(start, start + ROWS_PER_PAGE);
 
   return (
     <Page size="A4" style={s.tablePage}>
-      <StatementTable rows={pageRows} />
+      <StatementTable rows={pageRows} totalAmount={totalAmount} />
     </Page>
   );
 }
@@ -237,16 +241,18 @@ interface Props {
 }
 
 export function BankStatementPTAPDF({ data }: Props) {
-  const { rows } = data;
+  const rows = data.rows;
+  const totalAmount = rows.reduce((sum, row) => sum + Number(formatMoneyWhole(row.netAmount)), 0);
+  const reportData = { ...data, totalAmount };
   const firstPageRows = rows.slice(0, FIRST_PAGE_ROWS);
   const remainingRows = rows.slice(FIRST_PAGE_ROWS);
   const tablePageCount = Math.ceil(remainingRows.length / ROWS_PER_PAGE);
 
   return (
     <Document>
-      <PTALetterPage data={data} rows={firstPageRows} />
+      <PTALetterPage data={reportData} rows={firstPageRows} />
       {Array.from({ length: tablePageCount }, (_, i) => (
-        <TablePage key={i} rows={remainingRows} pageIndex={i} />
+        <TablePage key={i} rows={remainingRows} pageIndex={i} totalAmount={i === tablePageCount - 1 ? totalAmount : undefined} />
       ))}
     </Document>
   );

@@ -1,3 +1,4 @@
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { FormXVIData } from "@/components/pdf/FormXVIPDF";
 import {
@@ -77,6 +78,10 @@ export async function generateFormXVIExcel(data: FormXVIData): Promise<void> {
       }
     }
   }
+
+  finishReportTable(sheet, 5, 4 + data.rows.length, [
+    { column: 36, kind: "days" },
+  ], 5 + data.rows.length, 2);
 
   await downloadExcel(workbook, reportFileName("FormXVI", data.month, data.year));
 }

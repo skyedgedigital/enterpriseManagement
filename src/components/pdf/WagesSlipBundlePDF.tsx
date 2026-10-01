@@ -1,3 +1,4 @@
+import { formatMoney2, formatMoneyWhole } from "@/lib/moneyRounding";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { WagesPaySlipData } from "./WagesPaySlipPDF";
 import { CONTRACTOR_ADDRESS, CONTRACTOR_NAME } from "@/lib/constants";
@@ -21,7 +22,7 @@ const s = StyleSheet.create({
   },
   slip: {
     width: "49%",
-    height: "49%",
+    height: 400,
     borderWidth: 1,
     borderColor: "#000",
     padding: 5,
@@ -90,6 +91,7 @@ const s = StyleSheet.create({
   },
   line: {
     flexDirection: "row",
+    flexWrap: "wrap",
     marginBottom: 1,
   },
   lineLabel: {
@@ -109,10 +111,9 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 function SlipCard({ data }: { data: WagesPaySlipData }) {
-  const rounded = (n: number | null | undefined): string =>
-    String(Math.round(n ?? 0));
+
   return (
-    <View style={s.slip}>
+    <View style={s.slip} wrap={false}>
       <View style={s.headerRow}>
         <Text style={s.headerLeft}>FOR XIX</Text>
         <Text style={s.headerCenter}>WAGES SLIP</Text>
@@ -185,13 +186,13 @@ function SlipCard({ data }: { data: WagesPaySlipData }) {
         <View style={s.line}>
           <Text style={s.lineLabel}>3. Rate of Daily Wages @ Piece Rate :</Text>
           <Text style={s.lineValue}>
-            {rounded(data.basicRate)} + {rounded(data.daRate)} = {rounded(data.payRate)}
+            {formatMoney2(data.basicRate)} + {formatMoney2(data.daRate)} = {formatMoney2(data.payRate)}
           </Text>
         </View>
         <View style={s.line}>
           <Text style={s.lineLabel}>4. Amount of Wages :</Text>
           <Text style={s.lineValue}>
-            {rounded(data.basicAmount)} + {rounded(data.daAmount)} + {rounded(data.otherCash)}
+            {formatMoney2(data.basicAmount)} + {formatMoney2(data.daAmount)} + {formatMoney2(data.otherCash)}
           </Text>
         </View>
         <View style={s.line}>
@@ -203,23 +204,23 @@ function SlipCard({ data }: { data: WagesPaySlipData }) {
         </View>
         <View style={s.line}>
           <Text style={s.lineLabel}>7. Deduction if Any Advance :</Text>
-          <Text style={s.lineValue}>{rounded(data.advanceDeduction)}</Text>
+          <Text style={s.lineValue}>{formatMoney2(data.advanceDeduction)}</Text>
           <Text style={[s.lineLabel, { marginLeft: 6 }]}>Deduction if Any Damage :</Text>
-          <Text style={s.lineValue}>{rounded(data.damageDeduction)}</Text>
+          <Text style={s.lineValue}>{formatMoney2(data.damageDeduction)}</Text>
           <Text style={[s.lineLabel, { marginLeft: 6 }]}>PF:</Text>
-          <Text style={s.lineValue}>{rounded(data.pf)}</Text>
+          <Text style={s.lineValue}>{formatMoneyWhole(data.pf)}</Text>
           <Text style={[s.lineLabel, { marginLeft: 6 }]}>ESI:</Text>
-          <Text style={s.lineValue}>{rounded(data.esi)}</Text>
+          <Text style={s.lineValue}>{formatMoneyWhole(data.esi)}</Text>
         </View>
         <View style={s.line}>
           <Text style={s.lineLabel}>8. Total Incentive amount :</Text>
           <Text style={s.lineValue}>
-            {data.incentiveAmount != null ? rounded(data.incentiveAmount) : "NA"}
+            {data.incentiveAmount != null ? formatMoney2(data.incentiveAmount) : "NA"}
           </Text>
         </View>
         <View style={s.line}>
           <Text style={s.lineLabel}>9. Net Amount of Wages Paid :</Text>
-          <Text style={s.lineValue}>{rounded(data.netAmountPaid)}</Text>
+          <Text style={s.lineValue}>{formatMoneyWhole(data.netAmountPaid)}</Text>
         </View>
       </View>
 

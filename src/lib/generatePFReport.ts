@@ -1,6 +1,6 @@
 import type { Employee, Wages, WorkOrder, Designation } from "@/types";
 import { computePayment } from "./paymentCalculation";
-import { roundNearestInteger } from "./moneyRounding";
+import { roundNearestInteger, roundHalfUp2 } from "./moneyRounding";
 
 /** One row of the PF report table (as in the screenshot). */
 export interface PFReportRow {
@@ -73,7 +73,7 @@ function pfFromWageRow(
   return {
     epfWagesGross: gross,
     epfWages,
-    pf: breakdown.raw.pf,
+    pf: breakdown.pf,
     ncpDays: Math.max(0, totalWorkingDays - attendance),
   };
 }
@@ -145,14 +145,14 @@ export function buildPFReport({
     rows.push({
       uan: emp.uan?.trim() ?? "",
       employeeName: emp.name?.trim() || emp.code || "",
-      epfWagesGross: roundNearestInteger(epfWagesGrossSum),
-      epfWages: roundNearestInteger(epfWagesSum),
-      epsWages: roundNearestInteger(epsWages),
-      edliWages: roundNearestInteger(edliWages),
+      epfWagesGross: roundHalfUp2(epfWagesGrossSum),
+      epfWages: roundHalfUp2(epfWagesSum),
+      epsWages: roundHalfUp2(epsWages),
+      edliWages: roundHalfUp2(edliWages),
       pf,
       epfAmount,
       ppfAmount,
-      ncpDays: roundNearestInteger(ncpDaysSum),
+      ncpDays: roundHalfUp2(ncpDaysSum),
       lastColumn: 0,
     });
   }

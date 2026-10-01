@@ -1,5 +1,35 @@
 import type { Borders, Fill, Font, Workbook, Worksheet } from "exceljs";
 import { MONTHS } from "./constants";
+import { reportValue, SIGNING, type ReportColumnKind } from './reportPolicy';
+import { roundHalfUp2 } from './moneyRounding';
+
+export interface ExcelReportColumn { column: number; kind: ReportColumnKind }
+
+/** Finalize an explicitly declared report table without guessing from numeric identifiers. */
+export function finishReportTable(sheet: Worksheet, start: number, end: number, columns: ExcelReportColumn[], totalRow: number, labelColumn = 2): void {
+  const total = sheet.getRow(totalRow);
+  total.getCell(labelColumn).value = 'Total';
+  for (const { column, kind } of columns) {
+    const signing = kind === 'signature' || kind === 'initial';
+    if (signing) sheet.getColumn(column).width = kind === 'signature' ? SIGNING.excelSignature : SIGNING.excelInitial;
+    let sum = 0;
+    for (let r = start; r <= end; r++) {
+      const row = sheet.getRow(r);
+      if (signing) row.height = Math.max(row.height ?? 0, SIGNING.rowHeight);
+      const cell = row.getCell(column);
+      if (['money', 'wholeMoney', 'rate', 'days'].includes(kind)) {
+        const numeric = typeof cell.value === 'number' ? cell.value : typeof cell.value === 'string' && cell.value.trim() !== '' ? Number(cell.value) : NaN;
+        if (Number.isFinite(numeric)) { cell.value = reportValue(numeric, kind); sum += cell.value; }
+        cell.numFmt = kind === 'wholeMoney' ? '0' : kind === 'days' ? '0.##' : '0.00';
+      }
+    }
+    if (['money', 'wholeMoney', 'days'].includes(kind)) {
+      total.getCell(column).value = roundHalfUp2(sum);
+      total.getCell(column).numFmt = kind === 'wholeMoney' ? '0' : kind === 'days' ? '0.##' : '0.00';
+    } else if (column !== labelColumn) total.getCell(column).value = '';
+  }
+  total.eachCell({ includeEmpty: true }, cell => { cell.border = THIN_BORDER_DEF; cell.font = { ...BODY_FONT_DEF, bold: true }; });
+}
 
 const THIN_BORDER_DEF: Partial<Borders> = {
   top: { style: "thin" },

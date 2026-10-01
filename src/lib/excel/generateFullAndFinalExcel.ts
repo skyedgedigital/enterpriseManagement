@@ -1,3 +1,5 @@
+import { finishReportTable } from "@/lib/excelUtils";
+import { formatMoney2 } from "@/lib/moneyRounding";
 import { Workbook } from "exceljs";
 import type { FullAndFinalData } from "@/lib/buildFullAndFinalData";
 import { applyTableBorders, downloadExcel, HEADER_STYLE } from "@/lib/excelUtils";
@@ -19,7 +21,7 @@ const MONTH_SHORT = [
 ];
 
 function fmt2(n: number): string {
-  return (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+  return formatMoney2(n);
 }
 
 function todayDdMmYyyy(): string {
@@ -129,15 +131,15 @@ export async function generateFullAndFinalExcel(
     "Year/Month",
     data.years.map((y) => ({
       label: y.label,
-      values: y.months.map((m) => Math.round(m.daysWorked)),
-      total: Math.round(y.totalDays),
+      values: y.months.map((m) => m.daysWorked),
+      total: y.totalDays,
     })),
     thinBorder,
     boldFont,
     normalFont,
     "int",
   );
-  row += 2 + Math.max(1, data.years.length);
+  row += 3 + Math.max(1, data.years.length);
   row += 1; // spacer
 
   // =========================================================================
@@ -164,7 +166,7 @@ export async function generateFullAndFinalExcel(
     normalFont,
     "money",
   );
-  row += 2 + Math.max(1, data.years.length);
+  row += 3 + Math.max(1, data.years.length);
   row += 1;
 
   // =========================================================================
@@ -179,9 +181,7 @@ export async function generateFullAndFinalExcel(
     {
       component: "Unpaid Wages",
       definition: "Wage calculation for working days for current month",
-      eligibility: `Days Worked in Current Month: ${Math.round(
-        data.unpaidWagesDays,
-      )}`,
+      eligibility: `Days Worked in Current Month: ${String(data.unpaidWagesDays)}`,
       amount: data.unpaidWages,
     },
     {
@@ -189,10 +189,10 @@ export async function generateFullAndFinalExcel(
       definition:
         "Earned leave calculated in current calendar year after deducting availed earned leave in the calendar year. Earned leave is 1 for every 20 days worked in a calendar year",
       eligibility:
-        `Days worked in Calendar Year: ${Math.round(data.grandTotalDays)}\n` +
+        `Days worked in Calendar Year: ${String(data.grandTotalDays)}\n` +
         `No. of earned leave eligible: ${Math.round(data.elTotal)}\n` +
-        `No. of EL availed: ${Math.round(data.leaveAvailedDays)}\n` +
-        `Balance EL: ${Math.round(data.balanceLeaveDays)}`,
+        `No. of EL availed: ${String(data.leaveAvailedDays)}\n` +
+        `Balance EL: ${String(data.balanceLeaveDays)}`,
       amount: data.leaveAmountMonetary,
     },
     {
@@ -200,7 +200,7 @@ export async function generateFullAndFinalExcel(
       definition:
         "Bonus eligibility of current financial year is to be auto-calculated as 8.33% of total Basic+VDA of current FY in case employee has worked minimum 30 days in a FY; else system to calculate bonus eligibility as nil. In case of employee having gross wages more than Rs.21,000 p.m. bonus is not applicable.",
       eligibility:
-        `No of days worked in FY: ${Math.round(data.currentFYDaysWorked)}\n` +
+        `No of days worked in FY: ${String(data.currentFYDaysWorked)}\n` +
         `8.33% of gross wages payable`,
       amount: data.bonusAmount,
     },
@@ -209,7 +209,7 @@ export async function generateFullAndFinalExcel(
       definition:
         "Bonus eligibility of previous financial year is to be auto-calculated as 8.33% of total Basic+VDA of previous FY in case employee has worked minimum 30 days in a FY; else system to calculate bonus eligibility as nil. In case of employee having gross wages more than Rs.21,000 p.m. bonus is not applicable.",
       eligibility:
-        `No of days worked in FY: ${Math.round(data.previousFYDaysWorked)}\n` +
+        `No of days worked in FY: ${String(data.previousFYDaysWorked)}\n` +
         `8.33% of gross wages payable`,
       amount: data.previousFYBonusAmount,
     },
@@ -237,7 +237,7 @@ export async function generateFullAndFinalExcel(
         "Notice pay is payable in lieu of notice as defined in the Industrial Disputes Act. An employer is required to give at least one month's advance notice or payment in lieu thereof to a worker who has completed at least one year of continuous service before termination. It is to be nil in case mode of separation is 'Resignation by workman' else notice pay to be calculated as 26 days (in case total no. of working days is 240 from DOJ) else 3 days of (Basic+VDA) amount of last drawn wages.",
       eligibility:
         `Mode of Separation: ${data.modeOfSeparation || "N/A"}\n` +
-        `No of days worked: ${Math.round(data.grandTotalDays)}`,
+        `No of days worked: ${String(data.grandTotalDays)}`,
       amount: data.noticePay,
     },
   ];
@@ -291,7 +291,8 @@ export async function generateFullAndFinalExcel(
   sheet.getCell(row, 1).border = thinBorder;
   const ffCol = compWidths[0] + compWidths[1] + compWidths[2] + 1;
   sheet.mergeCells(row, ffCol, row, TOTAL_COLS);
-  sheet.getCell(row, ffCol).value = `₹ ${formatMoneyWhole(data.totalFullAndFinal)}`;
+  sheet.getCell(row, ffCol).value = data.totalFullAndFinal;
+  sheet.getCell(row, ffCol).numFmt = '"₹ "#,##0.00';
   sheet.getCell(row, ffCol).font = boldFont;
   sheet.getCell(row, ffCol).alignment = { horizontal: "right", vertical: "middle" };
   sheet.getCell(row, ffCol).border = thinBorder;
@@ -339,9 +340,7 @@ export async function generateFullAndFinalExcel(
   // Workman Declaration
   // =========================================================================
   addParagraphBlock(sheet, row, TOTAL_COLS, "Workman Declaration:", [
-    `Received a sum of ₹ ${fmt2(
-      data.netPayable,
-    )} (post deduction of ₹ ${fmt2(data.totalDeductions)}) on ${todayDdMmYyyy()} as Full and Final Settlement for my service with M/s ${data.contractorName.toUpperCase()} for the working period ${data.servicePeriodFrom}-${data.servicePeriodTo}.`,
+    `Received a sum of ₹ ${formatMoneyWhole(data.netPayable)} (post deduction of ₹ ${fmt2(data.totalDeductions)}) on ${todayDdMmYyyy()} as Full and Final Settlement for my service with M/s ${data.contractorName.toUpperCase()} for the working period ${data.servicePeriodFrom}-${data.servicePeriodTo}.`,
     "",
     "Sign/L.T.I. of workman",
     data.employeeName.toUpperCase(),
@@ -449,7 +448,7 @@ function writeMonthTable(
     for (let i = 0; i < 12; i += 1) {
       const cell = sheet.getCell(row, firstMonthCol + i);
       cell.value = r.values[i] ?? 0;
-      cell.numFmt = format === "money" ? "#,##0.00" : "0";
+      cell.numFmt = format === "money" ? "#,##0.00" : "0.##";
       cell.alignment = { horizontal: "right" };
       cell.font = normalFont;
       cell.border = thinBorder;
@@ -457,11 +456,15 @@ function writeMonthTable(
 
     const tCell = sheet.getCell(row, totalCol);
     tCell.value = r.total;
-    tCell.numFmt = format === "money" ? "#,##0.00" : "0";
+    tCell.numFmt = format === "money" ? "#,##0.00" : "0.##";
     tCell.font = boldFont;
     tCell.alignment = { horizontal: "right" };
     tCell.border = thinBorder;
   });
+  finishReportTable(sheet, startRow + 1, startRow + rows.length, [
+    ...Array.from({ length: 12 }, (_, i) => ({ column: firstMonthCol + i, kind: format === "money" ? "money" as const : "days" as const })),
+    { column: totalCol, kind: format === "money" ? "money" : "days" },
+  ], startRow + 1 + Math.max(1, rows.length), labelCol);
 }
 
 function addParagraphBlock(

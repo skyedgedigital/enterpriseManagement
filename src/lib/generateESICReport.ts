@@ -1,5 +1,5 @@
 import type { Employee, Wages, WorkOrder, Designation } from "@/types";
-import { roundNearestInteger } from "./moneyRounding";
+import { roundHalfUp2 } from "./moneyRounding";
 
 /** One row of the ESIC report table. */
 export interface ESICReportRow {
@@ -93,7 +93,7 @@ export function buildESICReport({
       ipNumber: to10DigitIPNumber(emp.esicNo),
       ipName: (emp.name?.trim() || emp.code || "").toUpperCase(),
       daysPaid: daysPaidSum,
-      totalMonthlyWage: roundNearestInteger(totalMonthlyWageSum),
+      totalMonthlyWage: roundHalfUp2(totalMonthlyWageSum),
     });
   }
 

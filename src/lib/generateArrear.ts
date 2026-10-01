@@ -1,3 +1,4 @@
+import { roundHalfUp2 } from "./moneyRounding";
 import { createElement } from "react";
 import type { Attendance, Designation, Employee, Wages, WorkOrder } from "@/types";
 import { openPDFInNewTab } from "./pdfUtils";
@@ -247,14 +248,14 @@ export function buildArrearData(params: GenerateArrearParams): ArrearData {
       daysWorked: totalDays,
       basicRate: basicDiffRate,
       daRate: daDiffRate,
-      basicAmount: Math.round(basicDiffAmount),
-      daAmount: Math.round(daDiffAmount),
+      basicAmount: roundHalfUp2(basicDiffAmount),
+      daAmount: roundHalfUp2(daDiffAmount),
       otherCash: 0,
-      grossWages: Math.round(payment.resultant2),
-      pf: Math.round(payment.pf),
-      esi: Math.round(payment.esi),
+      grossWages: roundHalfUp2(payment.resultant2),
+      pf: payment.pf,
+      esi: payment.esi,
       otherDeduction: 0,
-      netAmountPaid: Math.round(payment.netPayment),
+      netAmountPaid: payment.netPayment,
     });
   }
 

@@ -1,3 +1,4 @@
+import { roundHalfUp2 } from "./moneyRounding";
 import { createElement } from "react";
 import type { Attendance, Designation, Employee, Wages, WorkOrder } from "@/types";
 import { openPDFInNewTab } from "./pdfUtils";
@@ -120,12 +121,12 @@ export function buildForm17Data({
       basicAmount: slip.basicAmount,
       daAmount: slip.daAmount,
       otherCash: slip.otherCash,
-      allowances: Math.round((w.allowances ?? 0) + weeklyAllowanceAmount),
-      incentiveAmount: Math.round(slip.incentiveAmount ?? 0),
+      allowances: roundHalfUp2((w.allowances ?? 0) + weeklyAllowanceAmount),
+      incentiveAmount: roundHalfUp2(slip.incentiveAmount ?? 0),
       grossWages: slip.grossWages,
       pf: slip.pf,
       esi: slip.esi,
-      otherDeduction: Math.round(w.otherDeduction ?? 0),
+      otherDeduction: roundHalfUp2(w.otherDeduction ?? 0),
       netAmountPaid: slip.netAmountPaid,
     });
   }

@@ -1,3 +1,4 @@
+import { formatMoney2 } from "@/lib/moneyRounding";
 import { Workbook } from "exceljs";
 import type { WagesPaySlipData } from "@/components/pdf/WagesPaySlipPDF";
 import {
@@ -34,7 +35,7 @@ export async function generateWagesPaySlipExcel(data: WagesPaySlipData): Promise
     ["Nature of Work", data.natureOfWork || "-"],
     ["Month", monthYear],
     ["No. of Days Worked", data.daysWorked],
-    ["Rate of Daily Wages (Basic + DA)", `${data.basicRate} + ${data.daRate} = ${data.payRate}`],
+    ["Rate of Daily Wages (Basic + DA)", `${formatMoney2(data.basicRate)} + ${formatMoney2(data.daRate)} = ${formatMoney2(data.payRate)}`],
     ["Basic Amount", data.basicAmount],
     ["DA Amount", data.daAmount],
     ["Other Cash", data.otherCash],
@@ -54,6 +55,7 @@ export async function generateWagesPaySlipExcel(data: WagesPaySlipData): Promise
     sheet.getCell(rowIndex, 2).value = value;
     sheet.getCell(rowIndex, 2).style =
       typeof value === "number" ? RIGHT_CELL_STYLE : { ...RIGHT_CELL_STYLE, alignment: { vertical: "middle" } };
+    if (typeof value === "number") sheet.getCell(rowIndex, 2).numFmt = ["PF Deduction", "ESI Deduction", "Net Amount Paid"].includes(label) ? "0" : label === "No. of Days Worked" ? "0.##" : "0.00";
     rowIndex += 1;
   }
 

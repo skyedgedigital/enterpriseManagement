@@ -1,3 +1,4 @@
+import { roundHalfUp2 } from "./moneyRounding";
 import { createElement } from "react";
 import type { Employee, Wages, WorkOrder, Designation, Attendance } from "@/types";
 import {
@@ -84,18 +85,18 @@ export function buildWagesPaySlipData({
     month,
     year,
     daysWorked,
-    basicRate: Math.round(basicRate),
-    daRate: Math.round(daRate),
-    payRate: Math.round(payRate),
-    basicAmount: Math.round(basicRate * daysWorked),
-    daAmount: Math.round(daRate * daysWorked),
+    basicRate: roundHalfUp2(basicRate),
+    daRate: roundHalfUp2(daRate),
+    payRate: roundHalfUp2(payRate),
+    basicAmount: roundHalfUp2(basicRate * daysWorked),
+    daAmount: roundHalfUp2(daRate * daysWorked),
     otherCash: breakdown.otherCash,
     grossWages: breakdown.resultant2,
-    advanceDeduction: Math.round(wages.advanceDeduction ?? 0),
-    damageDeduction: Math.round(wages.damageDeduction ?? 0),
+    advanceDeduction: roundHalfUp2(wages.advanceDeduction ?? 0),
+    damageDeduction: roundHalfUp2(wages.damageDeduction ?? 0),
     pf: breakdown.pf,
     esi: breakdown.esi,
-    incentiveAmount: wages.incentiveApplicable ? Math.round(incentiveEarned) : null,
+    incentiveAmount: wages.incentiveApplicable ? roundHalfUp2(incentiveEarned) : null,
     netAmountPaid: breakdown.netPayment,
     raw: {
       pf: breakdown.raw.pf,
