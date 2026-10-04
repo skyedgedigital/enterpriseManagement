@@ -1,3 +1,5 @@
+import { wageRegisterColumns } from "@/lib/reportPolicy";
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { ArrearData } from "@/lib/generateArrear";
 import {
@@ -117,7 +119,7 @@ export async function generateArrearExcel(data: ArrearData): Promise<void> {
       row.designation || "-",
       row.daysWorked,
       "-",
-      `${Math.round(row.basicRate)}+${Math.round(row.daRate)}`,
+      row.basicRate + row.daRate,
       row.basicAmount,
       row.daAmount,
       0,
@@ -159,6 +161,8 @@ export async function generateArrearExcel(data: ArrearData): Promise<void> {
       };
     });
   }
+
+  finishReportTable(sheet, 7, 6 + data.rows.length, wageRegisterColumns.map((column, index) => ({ column: index + 1, kind: column.kind })), 7 + data.rows.length, 2);
 
   await downloadExcel(workbook, `Arrear_${fromLabel}_to_${toLabel}.xlsx`);
 }

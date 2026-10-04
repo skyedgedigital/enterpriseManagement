@@ -7,7 +7,6 @@ import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector } from '@/hooks/useAppSelector';
 import {
   deleteAllotment,
-  fetchAllotments,
   fetchTools,
   updateAllotment,
 } from '@/store/slices/fleet-manager/toolStoreManagementSlice';
@@ -16,10 +15,11 @@ import type { ToolStoreManagement } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { DataTable, type Column } from '@/components/shared/DataTable';
-import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { DataTable, type Column } from '@/components/shared/DataTable';
+import { DeleteDialog } from '@/components/shared/DeleteDialog';
+import { useDebouncedCollectionSearch } from '@/hooks/useDebouncedCollectionSearch';
 import { BulkUploadDialog } from '@/components/shared/BulkUploadDialog';
 import { ExportExcelButton } from '@/components/shared/ExportExcelButton';
 import { createToolAllotmentBulkConfig } from '@/lib/excel/bulkUpload/fleetConfigs';
@@ -40,16 +40,24 @@ export function ToolAllotmentListPage() {
   const dispatch = useAppDispatch();
   const { items: vehicles } = useAppSelector((state) => state.vehicles);
   const tools = useAppSelector((state) => state.tools.tools);
-  const { allotments, loading } = useAppSelector(
-    (state) => state.toolStoreManagement,
-  );
+  const { loading } = useAppSelector((state) => state.toolStoreManagement);
+  const {
+    query,
+    setQuery,
+    items,
+    allItems,
+    initialLoading,
+    searchLoading,
+    removeResult,
+    patchResult,
+    reloadAll,
+  } = useDebouncedCollectionSearch<ToolStoreManagement>('toolAllotments');
   const allotmentBulkConfig = useMemo(() => createToolAllotmentBulkConfig(), []);
   const [deleteTarget, setDeleteTarget] = useState<ToolStoreManagement | null>(
     null,
   );
 
   useEffect(() => {
-    dispatch(fetchAllotments());
     dispatch(fetchVehicles());
     dispatch(fetchTools());
   }, [dispatch]);
@@ -67,6 +75,7 @@ export function ToolAllotmentListPage() {
     );
     if (updateAllotment.fulfilled.match(result)) {
       toast.success('Marked as returned');
+      patchResult(allotment.id, { status: 'returned' });
     } else {
       toast.error(result.payload as string);
     }
@@ -77,6 +86,7 @@ export function ToolAllotmentListPage() {
     const result = await dispatch(deleteAllotment(deleteTarget.id));
     if (deleteAllotment.fulfilled.match(result)) {
       toast.success('Allotment deleted');
+      removeResult(deleteTarget.id);
       setDeleteTarget(null);
     } else {
       toast.error(result.payload as string);
@@ -152,24 +162,28 @@ export function ToolAllotmentListPage() {
     },
   ];
 
-  if (loading && allotments.length === 0) return <LoadingState />;
+  if (initialLoading && allItems.length === 0) return <LoadingState />;
 
   return (
     <div className='space-y-6'>
       <PageHeader
         title='Tool Allotments'
-        description='Manage tool allotments to vehicles'
+        description={
+          query.trim()
+            ? `${items.length} match${items.length !== 1 ? 'es' : ''}`
+            : `${allItems.length} allotment${allItems.length !== 1 ? 's' : ''} total`
+        }
         action={
           <div className="flex gap-2">
             <ExportExcelButton
               config={toolAllotmentExportConfig}
-              items={allotments}
+              items={items}
               context={{ vehicles, tools }}
             />
             <BulkUploadDialog
               config={allotmentBulkConfig}
               context={{ vehicles, tools }}
-              onSuccess={() => dispatch(fetchAllotments())}
+              onSuccess={() => { void reloadAll(); }}
             />
             <Button
               onClick={() =>
@@ -183,10 +197,10 @@ export function ToolAllotmentListPage() {
         }
       />
 
-      {allotments.length === 0 ? (
+      {allItems.length === 0 ? (
         <EmptyState
-          title='No Allotments'
-          description='Create your first tool allotment to get started.'
+          title='No tool allotments'
+          description='Create your first allotment to get started.'
           action={
             <Button
               onClick={() =>
@@ -199,39 +213,31 @@ export function ToolAllotmentListPage() {
           }
         />
       ) : (
-        <DataTable
-          data={allotments}
-          columns={columns}
-          searchKey='tool'
-          searchPlaceholder='Search by tool name...'
-          actions={(allotment) => (
-            <>
-              {allotment.status === 'active' && (
-                <Button
-                  variant='ghost'
-                  size='icon-sm'
-                  title='Mark as returned'
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMarkReturned(allotment);
-                  }}
-                >
-                  <RotateCcw className='h-4 w-4 text-green-600' />
-                </Button>
-              )}
-              {/* <Button
+      <DataTable
+        data={items}
+        columns={columns}
+        searchPlaceholder='Search by tool name...'
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchLoading={searchLoading}
+        actions={(allotment) => (
+          <>
+            {allotment.status === 'active' && (
+              <Button
                 variant='ghost'
                 size='icon-sm'
+                title='Mark as returned'
                 onClick={(e) => {
                   e.stopPropagation();
-                  setDeleteTarget(allotment);
+                  handleMarkReturned(allotment);
                 }}
               >
-                <Trash2 className='h-4 w-4 text-destructive' />
-              </Button> */}
-            </>
-          )}
-        />
+                <RotateCcw className='h-4 w-4 text-green-600' />
+              </Button>
+            )}
+          </>
+        )}
+      />
       )}
 
       <DeleteDialog

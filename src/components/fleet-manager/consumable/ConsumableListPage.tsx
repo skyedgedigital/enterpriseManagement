@@ -7,19 +7,17 @@ import type { Timestamp } from 'firebase/firestore';
 
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector } from '@/hooks/useAppSelector';
-import {
-  fetchConsumables,
-  deleteConsumable,
-} from '@/store/slices/fleet-manager/consumable';
+import { useDebouncedCollectionSearch } from '@/hooks/useDebouncedCollectionSearch';
+import { deleteConsumable } from '@/store/slices/fleet-manager/consumable';
 import type { Consumable } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { LoadingState } from '@/components/shared/LoadingState';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable, type Column } from '@/components/shared/DataTable';
 import { DeleteDialog } from '@/components/shared/DeleteDialog';
-import { LoadingState } from '@/components/shared/LoadingState';
 import { fetchVehicles } from '@/store/slices/fleet-manager/vehicleSlice';
-import { EmptyState } from '@/components/shared/EmptyState';
 import { BulkUploadDialog } from '@/components/shared/BulkUploadDialog';
 import { ExportExcelButton } from '@/components/shared/ExportExcelButton';
 import { createConsumableBulkConfig } from '@/lib/excel/bulkUpload/fleetConfigs';
@@ -32,13 +30,22 @@ const fmtInr = (amount: number) => `₹${Number(amount).toLocaleString('en-IN')}
 export function ConsumableListPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { items, loading } = useAppSelector((state) => state.consumables);
+  const { loading } = useAppSelector((state) => state.consumables);
+  const {
+    query,
+    setQuery,
+    items,
+    allItems,
+    initialLoading,
+    searchLoading,
+    removeResult,
+    reloadAll,
+  } = useDebouncedCollectionSearch<Consumable>('consumables');
   const vehicles = useAppSelector((state) => state.vehicles.items);
   const [deleteTarget, setDeleteTarget] = useState<Consumable | null>(null);
   const consumableBulkConfig = useMemo(() => createConsumableBulkConfig(), []);
 
   useEffect(() => {
-    dispatch(fetchConsumables());
     dispatch(fetchVehicles());
   }, [dispatch]);
 
@@ -47,6 +54,7 @@ export function ConsumableListPage() {
     const result = await dispatch(deleteConsumable(deleteTarget.id));
     if (deleteConsumable.fulfilled.match(result)) {
       toast.success('Consumable deleted');
+      removeResult(deleteTarget.id);
       setDeleteTarget(null);
     } else {
       toast.error((result.payload as string) || 'Delete failed');
@@ -69,13 +77,17 @@ export function ConsumableListPage() {
     },
   ];
 
-  if (loading && items.length === 0) return <LoadingState />;
+  if (initialLoading && allItems.length === 0) return <LoadingState />;
 
   return (
     <div className='space-y-6'>
       <PageHeader
         title='Consumables'
-        description='Track consumable items and expenses'
+        description={
+          query.trim()
+            ? `${items.length} match${items.length !== 1 ? 'es' : ''}`
+            : `${allItems.length} consumable${allItems.length !== 1 ? 's' : ''} total`
+        }
         action={
           <div className="flex gap-2">
             <ExportExcelButton
@@ -86,7 +98,7 @@ export function ConsumableListPage() {
             <BulkUploadDialog
               config={consumableBulkConfig}
               context={{ vehicles }}
-              onSuccess={() => dispatch(fetchConsumables())}
+              onSuccess={() => { void reloadAll(); }}
             />
             <Button onClick={() => navigate('/fleet-manager/consumables/new')}>
               <Plus className='h-4 w-4' />
@@ -96,10 +108,10 @@ export function ConsumableListPage() {
         }
       />
 
-      {items.length === 0 ? (
+      {allItems.length === 0 ? (
         <EmptyState
           title='No consumables'
-          description='Add your first consumable entry to get started.'
+          description='Add your first consumable to get started.'
           action={
             <Button onClick={() => navigate('/fleet-manager/consumables/new')}>
               <Plus className='h-4 w-4' />
@@ -108,36 +120,38 @@ export function ConsumableListPage() {
           }
         />
       ) : (
-        <DataTable
-          data={items}
-          columns={columns}
-          searchKey='vehicleNumber'
-          searchPlaceholder='Search by vehicle number...'
-          actions={(consumable) => (
-            <>
-              <Button
-                variant='ghost'
-                size='icon-sm'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/fleet-manager/consumables/${consumable.id}/edit`);
-                }}
-              >
-                <Pencil className='h-4 w-4' />
-              </Button>
-              <Button
-                variant='ghost'
-                size='icon-sm'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteTarget(consumable);
-                }}
-              >
-                <Trash2 className='h-4 w-4 text-destructive' />
-              </Button>
-            </>
-          )}
-        />
+      <DataTable
+        data={items}
+        columns={columns}
+        searchPlaceholder='Search by vehicle number...'
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchLoading={searchLoading}
+        actions={(consumable) => (
+          <>
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/fleet-manager/consumables/${consumable.id}/edit`);
+              }}
+            >
+              <Pencil className='h-4 w-4' />
+            </Button>
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteTarget(consumable);
+              }}
+            >
+              <Trash2 className='h-4 w-4 text-destructive' />
+            </Button>
+          </>
+        )}
+      />
       )}
 
       <DeleteDialog

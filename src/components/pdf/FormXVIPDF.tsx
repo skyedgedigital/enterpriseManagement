@@ -1,6 +1,8 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { PDFFormHeader, PDFContractorBlock, PDFFieldRow } from "./primitives";
 import { formatMonthYear } from "@/lib/pdfUtils";
+import { ReportTotalsRow } from './ReportTotalsRow';
+import { musterColumns } from '@/lib/reportPolicy';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -42,6 +44,7 @@ const COL = {
   total: 32,
   remarks: 100,
 };
+const TABLE_WIDTH = COL.serial + COL.name + COL.father + COL.sex + COL.daysTotal + COL.total + COL.remarks;
 
 const s = StyleSheet.create({
   page: {
@@ -61,7 +64,7 @@ const s = StyleSheet.create({
   legend: { fontSize: 6.5, marginBottom: 6, fontFamily: "Helvetica-Bold" },
 
   // --- Table ---
-  table: { width: "100%" },
+  table: { width: TABLE_WIDTH + 0.5 },
   tableRow: { flexDirection: "row" },
   tableHeaderRow: { flexDirection: "row", fontFamily: "Helvetica-Bold" },
 
@@ -87,6 +90,7 @@ interface Props {
 export function FormXVIPDF({ data }: Props) {
   const { location, employer, month, year, rows } = data;
   const dayNumbers = Array.from({ length: 31 }, (_, i) => i + 1);
+  const widths = [COL.serial, COL.name, COL.father, COL.sex, ...dayNumbers.map(() => COL.day), COL.total, COL.remarks];
 
   return (
     <Document>
@@ -130,6 +134,7 @@ export function FormXVIPDF({ data }: Props) {
 
           {/* ---- Table ---- */}
           <View style={[s.table, { borderTop: BORDER, borderLeft: BORDER }]}>
+            <View fixed wrap={false}>
             {/* "DATES" spanning header */}
             <View style={s.tableHeaderRow}>
               <View style={[s.cellSerial, { borderBottom: "none" }]} />
@@ -155,6 +160,7 @@ export function FormXVIPDF({ data }: Props) {
               <Text style={s.cellTotal}>Total{"\n"}Attendance</Text>
               <Text style={s.cellRemarks}>Remarks</Text>
             </View>
+            </View>
 
             {/* Data rows */}
             {rows.map((row) => (
@@ -170,6 +176,7 @@ export function FormXVIPDF({ data }: Props) {
                 <Text style={s.cellRemarks}>{row.remarks}</Text>
               </View>
             ))}
+            <ReportTotalsRow rows={rows} columns={musterColumns} widths={widths} />
           </View>
         </View>
       </Page>

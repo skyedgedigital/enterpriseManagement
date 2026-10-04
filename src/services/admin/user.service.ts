@@ -26,7 +26,7 @@ import {
 
 const SECONDARY_APP_NAME = 'AdminUserCreation';
 
-function userRecordFromData(id: string, raw: DocumentData): UserRoleRecord | null {
+export function userRecordFromData(id: string, raw: DocumentData): UserRoleRecord | null {
   const role = parseUserRole(raw.role);
   if (!role) return null;
   const email =

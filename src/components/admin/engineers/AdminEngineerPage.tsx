@@ -4,36 +4,43 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector } from '@/hooks/useAppSelector';
+import { useDebouncedCollectionSearch } from '@/hooks/useDebouncedCollectionSearch';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { DataTable, type Column } from '@/components/shared/DataTable';
-import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { DataTable, type Column } from '@/components/shared/DataTable';
+import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { BulkUploadDialog } from '@/components/shared/BulkUploadDialog';
 import { ExportExcelButton } from '@/components/shared/ExportExcelButton';
 import {
   adminEngineerBulkConfig,
   adminEngineerExportConfig,
 } from '@/lib/excel/bulkUpload/adminConfigs';
-import {
-  deleteEngineer,
-  fetchEngineers,
-} from '@/store/slices/admin/adminEngineerSlice';
+import { deleteEngineer } from '@/store/slices/admin/adminEngineerSlice';
 import { fetchAdminDepartments } from '@/store/slices/admin/adminDepartmentSlice';
 import type { Engineer } from '@/types';
 
 export function AdminEngineersPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { engineers, loading } = useAppSelector((state) => state.engineers);
+  const { loading } = useAppSelector((state) => state.engineers);
+  const {
+    query,
+    setQuery,
+    items,
+    allItems,
+    initialLoading,
+    searchLoading,
+    removeResult,
+    reloadAll,
+  } = useDebouncedCollectionSearch<Engineer>('engineers');
   const { items: departments } = useAppSelector(
     (state) => state.adminDepartments,
   );
   const [deleteTarget, setDeleteTarget] = useState<Engineer | null>(null);
 
   useEffect(() => {
-    void dispatch(fetchEngineers());
     void dispatch(fetchAdminDepartments());
   }, [dispatch]);
 
@@ -46,6 +53,7 @@ export function AdminEngineersPage() {
     const result = await dispatch(deleteEngineer(deleteTarget.id));
     if (deleteEngineer.fulfilled.match(result)) {
       toast.success('Engineer deleted');
+      removeResult(deleteTarget.id);
       setDeleteTarget(null);
     } else {
       toast.error(result.payload as string);
@@ -61,24 +69,28 @@ export function AdminEngineersPage() {
     },
   ];
 
-  if (loading && engineers.length === 0) return <LoadingState />;
+  if (initialLoading && allItems.length === 0) return <LoadingState />;
 
   return (
     <div className='space-y-6'>
       <PageHeader
         title='Engineers'
-        description='Manage engineers'
+        description={
+          query.trim()
+            ? `${items.length} match${items.length !== 1 ? 'es' : ''}`
+            : `${allItems.length} engineer${allItems.length !== 1 ? 's' : ''} total`
+        }
         action={
           <div className='flex gap-2'>
             <ExportExcelButton
               config={adminEngineerExportConfig}
-              items={engineers}
+              items={items}
               context={{ departments }}
             />
             <BulkUploadDialog
               config={adminEngineerBulkConfig}
               context={{ departments }}
-              onSuccess={() => dispatch(fetchEngineers())}
+              onSuccess={() => { void reloadAll(); }}
             />
             <Button onClick={() => navigate('/admin/engineers/new')}>
               <Plus className='h-4 w-4' />
@@ -87,9 +99,9 @@ export function AdminEngineersPage() {
           </div>
         }
       />
-      {engineers.length === 0 ? (
+      {allItems.length === 0 ? (
         <EmptyState
-          title='No Engineers'
+          title='No engineers'
           description='Add your first engineer to get started.'
           action={
             <Button onClick={() => navigate('/admin/engineers/new')}>
@@ -99,36 +111,38 @@ export function AdminEngineersPage() {
           }
         />
       ) : (
-        <DataTable
-          data={engineers}
-          columns={columns}
-          searchKey='name'
-          searchPlaceholder='Search engineers...'
-          actions={(eng) => (
-            <>
-              <Button
-                variant='ghost'
-                size='icon-sm'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/admin/engineers/${eng.id}/edit`);
-                }}
-              >
-                <Pencil className='h-4 w-4' />
-              </Button>
-              <Button
-                variant='ghost'
-                size='icon-sm'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteTarget(eng);
-                }}
-              >
-                <Trash2 className='h-4 w-4 text-destructive' />
-              </Button>
-            </>
-          )}
-        />
+      <DataTable
+        data={items}
+        columns={columns}
+        searchPlaceholder='Search engineers...'
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchLoading={searchLoading}
+        actions={(eng) => (
+          <>
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/admin/engineers/${eng.id}/edit`);
+              }}
+            >
+              <Pencil className='h-4 w-4' />
+            </Button>
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteTarget(eng);
+              }}
+            >
+              <Trash2 className='h-4 w-4 text-destructive' />
+            </Button>
+          </>
+        )}
+      />
       )}
       <DeleteDialog
         open={!!deleteTarget}

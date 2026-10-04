@@ -1,5 +1,5 @@
 import type { AttendanceDay } from "@/types";
-import { roundNearestInteger } from "@/lib/moneyRounding";
+import { roundNearestInteger, roundHalfUp2 } from "@/lib/moneyRounding";
 
 /**
  * Payable attendance days from attendance: two half days = one full day.
@@ -107,25 +107,22 @@ export interface PaymentBreakdown {
   pf: number;
   /** 0.75% of resultant2, rounded to whole rupees. */
   esi: number;
-  /** Rounded to whole rupees. */
+  /** Rounded to two decimal places. */
   otherDeduction: number;
   /**
-   * Resultant2 − (rounded PF) − (rounded ESI) − (rounded otherDeduction),
-   * rounded to whole rupees. Displayed PF + ESI + OtherDeduction + Net
-   * therefore always tie exactly to Resultant2 (up to ±1 rupee from the
-   * Resultant2 rounding itself, which stays decimal).
+   * Gross minus whole-rupee PF/ESI and two-decimal other deductions,
+   * rounded to whole rupees. The net rounding adjustment is at most 0.50.
    */
   netPayment: number;
   /** Per-day basic rate (unchanged) */
   basic: number;
   /** Per-day DA rate (unchanged) */
   da: number;
-  /** Rounded to whole rupees. */
+  /** Rounded to two decimal places. */
   otherCash: number;
   allowances: number;
   overtime: number;
-  /** Raw unrounded values — useful when aggregating across months so totals
-   * can be "round of sum" rather than "sum of rounded". */
+  /** Raw values retained for diagnostics. Report totals sum displayed values. */
   raw: {
     pf: number;
     esi: number;
@@ -160,13 +157,9 @@ export function getEarnedIncentive(
  *    - true  → min(Resultant1, 15,000)  (capped)
  *    - false → Resultant1               (full amount)
  * 4. ESI = 0.75% of Resultant2, rounded to whole rupees.
- * 5. OtherDeduction rounded to whole rupees.
- * 6. Net = round(Resultant2 − roundedPF − roundedESI − roundedOtherDeduction)
- *    — PF/ESI/Net displayed will always tie together.
- *
- * All returned PF, ESI, OtherDeduction, OtherCash and NetPayment are
- * WHOLE RUPEES. Raw unrounded values are still available on `raw` for
- * callers that aggregate across rows and prefer round-of-sum semantics.
+ * 5. Other cash, allowances, overtime and other deductions retain two decimals.
+ * 6. Net = round(Resultant2 − roundedPF − roundedESI − two-decimal deductions).
+ * Report totals sum these returned amounts; raw values are diagnostic only.
  */
 export function computePayment(
   totalWorkingDays: number,
@@ -178,8 +171,8 @@ export function computePayment(
   otherDeduction: number,
   newPfApplicable = false,
 ): PaymentBreakdown {
-  const resultant1 = (basic + da) * totalWorkingDays;
-  const resultant2 = resultant1 + otherCash + allowances + overtime;
+  const resultant1 = roundHalfUp2((basic + da) * totalWorkingDays);
+  const resultant2 = roundHalfUp2(resultant1 + roundHalfUp2(otherCash) + roundHalfUp2(allowances) + roundHalfUp2(overtime));
   const pfBase = newPfApplicable
     ? Math.min(resultant1, PF_SALARY_CAP)
     : resultant1;
@@ -188,8 +181,8 @@ export function computePayment(
 
   const pfRounded = roundNearestInteger(pfRaw);
   const esiRounded = roundNearestInteger(esiRaw);
-  const otherDeductionRounded = roundNearestInteger(otherDeduction);
-  const otherCashRounded = roundNearestInteger(otherCash);
+  const otherDeductionRounded = roundHalfUp2(otherDeduction);
+  const otherCashRounded = roundHalfUp2(otherCash);
 
   const netPaymentRaw = resultant2 - pfRaw - esiRaw - otherDeduction;
   const netPaymentRounded = roundNearestInteger(
@@ -204,11 +197,11 @@ export function computePayment(
     esi: esiRounded,
     otherDeduction: otherDeductionRounded,
     netPayment: netPaymentRounded,
-    basic,
-    da,
+    basic: roundHalfUp2(basic),
+    da: roundHalfUp2(da),
     otherCash: otherCashRounded,
-    allowances,
-    overtime,
+    allowances: roundHalfUp2(allowances),
+    overtime: roundHalfUp2(overtime),
     raw: {
       pf: pfRaw,
       esi: esiRaw,

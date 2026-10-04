@@ -512,7 +512,7 @@ export function buildFullAndFinalData({
   // Resignation by Workman → 0, Retirement → 0
 
   // Total F&F (gross before deductions)
-  const totalFullAndFinal = roundNearestInteger(
+  const totalFullAndFinal = roundHalfUp2(
     unpaidWages +
       bonusAmount +
       previousFYBonusAmount +

@@ -1,3 +1,4 @@
+import { formatMoney2, formatMoneyWhole } from "@/lib/moneyRounding";
 import { Document, Text, View } from "@react-pdf/renderer";
 import {
   PDFPage,
@@ -38,12 +39,7 @@ export interface WagesPaySlipData {
   incentiveAmount: number | null;
   /** Whole rupees. */
   netAmountPaid: number;
-  /**
-   * Raw unrounded PF / ESI / OtherDeduction / OtherCash / Net values.
-   * Callers that aggregate multiple slips (e.g. Leave Payment Register)
-   * should sum these and round once, rather than summing the already-rounded
-   * display fields.
-   */
+  /** Raw values for diagnostics. Totals sum displayed fields. */
   raw: {
     pf: number;
     esi: number;
@@ -59,8 +55,7 @@ interface Props {
 
 export function WagesPaySlipPage({ data }: Props) {
   const d = data;
-  const formatRounded = (amount: number | undefined | null): string =>
-    String(Math.round(amount ?? 0));
+
 
   return (
     <PDFPage>
@@ -128,14 +123,14 @@ export function WagesPaySlipPage({ data }: Props) {
         {/* 3. Rate of Daily Wages */}
         <PDFNumberedLine number={3} label="Rate of Daily Wages @ Piece Rate">
           <Text style={s.value}>
-            {formatRounded(d.basicRate)}    +    {formatRounded(d.daRate)}    =    {formatRounded(d.payRate)}
+            {formatMoney2(d.basicRate)}    +    {formatMoney2(d.daRate)}    =    {formatMoney2(d.payRate)}
           </Text>
         </PDFNumberedLine>
 
         {/* 4. Amount of Wages */}
         <PDFNumberedLine number={4} label="Amount of Wages">
           <Text style={s.value}>
-            {formatRounded(d.basicAmount)}    +    {formatRounded(d.daAmount)}    +    {formatRounded(d.otherCash)}
+            {formatMoney2(d.basicAmount)}    +    {formatMoney2(d.daAmount)}    +    {formatMoney2(d.otherCash)}
           </Text>
         </PDFNumberedLine>
 
@@ -152,25 +147,25 @@ export function WagesPaySlipPage({ data }: Props) {
         {/* 7. Deductions */}
         <View style={[s.row, s.mb4, { flexWrap: "wrap" }]}>
           <Text style={s.label}>7. Deduction if Any Advance : </Text>
-          <Text style={s.value}>{formatRounded(d.advanceDeduction)}    </Text>
+          <Text style={s.value}>{formatMoney2(d.advanceDeduction)}    </Text>
           <Text style={s.label}>Deduction if Any Damage : </Text>
-          <Text style={s.value}>{formatRounded(d.damageDeduction)}    </Text>
+          <Text style={s.value}>{formatMoney2(d.damageDeduction)}    </Text>
           <Text style={s.label}>PF:    </Text>
-          <Text style={s.value}>{formatRounded(d.pf)}    </Text>
+          <Text style={s.value}>{formatMoneyWhole(d.pf)}    </Text>
           <Text style={s.label}>ESI:    </Text>
-          <Text style={s.value}>{formatRounded(d.esi)}</Text>
+          <Text style={s.value}>{formatMoneyWhole(d.esi)}</Text>
         </View>
 
         {/* 8. Incentive */}
         <PDFNumberedLine number={8} label="Total Incentive amount">
           <Text style={s.value}>
-            {d.incentiveAmount != null ? formatRounded(d.incentiveAmount) : "NA"}
+            {d.incentiveAmount != null ? formatMoney2(d.incentiveAmount) : "NA"}
           </Text>
         </PDFNumberedLine>
 
         {/* 9. Net Amount */}
         <PDFNumberedLine number={9} label="Net Amount of Wages Paid">
-          <Text style={s.value}>{formatRounded(d.netAmountPaid)}</Text>
+          <Text style={s.value}>{formatMoneyWhole(d.netAmountPaid)}</Text>
         </PDFNumberedLine>
       </View>
 
