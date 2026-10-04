@@ -1,3 +1,5 @@
+import { esiReportColumns } from "@/lib/reportPolicy";
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { ESICReportRow } from "@/lib/generateESICReport";
 import {
@@ -67,6 +69,8 @@ export async function generateESICReportExcel({
     sheet.getCell(r, 4).style = { ...sheet.getCell(r, 4).style, ...RIGHT_CELL_STYLE };
     sheet.getCell(r, 5).style = { ...sheet.getCell(r, 5).style, ...RIGHT_CELL_STYLE };
   }
+
+  finishReportTable(sheet, 3, 2 + rows.length, esiReportColumns.map((column, index) => ({ column: index + 1, kind: column.kind })), 3 + rows.length, 3);
 
   await downloadExcel(workbook, reportFileName("ESICReport", month, year));
 }

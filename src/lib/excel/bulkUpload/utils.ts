@@ -104,15 +104,19 @@ export function findEmployeeByCode(
   return employees.find((e) => e.code.trim().toLowerCase() === target);
 }
 
+export function workOrderMatchKey(value: string): string {
+  const normalized = value.trim().toLowerCase().replace(/\s*\/\s*/g, "/");
+  const core = normalized.match(/^(\d+\/\d+)/);
+  return core ? core[1] : normalized;
+}
+
 export function findWorkOrderByNumber(
   workOrders: WorkOrder[],
   number: string,
 ): WorkOrder | undefined {
-  const target = number.trim().toLowerCase();
+  const target = workOrderMatchKey(number);
   if (!target) return undefined;
-  return workOrders.find(
-    (wo) => wo.workOrderNumber.trim().toLowerCase() === target,
-  );
+  return workOrders.find((wo) => workOrderMatchKey(wo.workOrderNumber) === target);
 }
 
 const ATTENDANCE_STATUS_ALIASES: Record<string, AttendanceStatus> = {

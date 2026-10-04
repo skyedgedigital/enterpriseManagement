@@ -23,6 +23,11 @@ export function formatMoney2(amount: number): string {
   return roundHalfUp2(amount).toFixed(2);
 }
 
+/** Display the Basic + DA rate calculation consistently in reports. */
+export function formatBasicDaCalculation(basic: number, da: number): string {
+  return `${formatMoney2(basic)} + ${formatMoney2(da)} = ${formatMoney2(basic + da)}`;
+}
+
 /** Whole units as a string after nearest-integer rounding (e.g. rupees, leave days). */
 export function formatMoneyWhole(amount: number): string {
   return String(roundNearestInteger(amount));

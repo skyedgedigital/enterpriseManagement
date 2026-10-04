@@ -1,4 +1,5 @@
 import type { Attendance, Designation, Employee, Wages, WorkOrder } from "@/types";
+import { roundHalfUp2 } from './moneyRounding';
 import {
   CONTRACTOR_BONUS_CORRESPONDING_LINE,
   CONTRACTOR_BONUS_OFFICE_LINE,
@@ -41,11 +42,11 @@ export interface BonusChecklistData {
   rows: BonusChecklistRow[];
 }
 
-/** Per-month and year-end sums for the footer row (amounts are net wages only; arrear is separate). */
+/** Per-month and year-end sums for the footer row (amounts are gross wages only; arrear is separate). */
 export interface BonusChecklistFooterTotals {
   perMonth: { days: number; amount: number }[];
   sumArrear: number;
-  /** Sum of all monthly net amounts in the grid (excludes arrear). */
+  /** Sum of all monthly gross amounts in the grid (excludes arrear). */
   sumPaidExcludingArrear: number;
   sumDaysWorkedYear: number;
 }
@@ -67,7 +68,7 @@ export function computeBonusChecklistFooterTotals(rows: BonusChecklistRow[]): Bo
       const m = r.months[i];
       if (m) {
         days += m.days;
-        amount += m.amount;
+        amount += roundHalfUp2(m.amount);
       }
     }
     return { days, amount };
@@ -76,10 +77,10 @@ export function computeBonusChecklistFooterTotals(rows: BonusChecklistRow[]): Bo
   let sumPaidExcludingArrear = 0;
   let sumDaysWorkedYear = 0;
   for (const r of rows) {
-    sumArrear += r.arrear;
+    sumArrear += roundHalfUp2(r.arrear);
     sumDaysWorkedYear += r.daysWorkedYear;
     for (const m of r.months) {
-      sumPaidExcludingArrear += m.amount;
+      sumPaidExcludingArrear += roundHalfUp2(m.amount);
     }
   }
   return { perMonth, sumArrear, sumPaidExcludingArrear, sumDaysWorkedYear };
@@ -221,7 +222,7 @@ export function buildBonusChecklistData({
       });
 
       const days = slip.daysWorked;
-      const amount = slip.netAmountPaid;
+      const amount = slip.grossWages;
       months.push({ year, month, label, days, amount });
       daysWorkedYear += days;
       sumAmount += amount;

@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import type { Attendance, Employee, Wages, WorkOrder } from "@/types";
 import { CONTRACTOR_ADDRESS, CONTRACTOR_NAME } from "./constants";
-import { roundHalfUp2, roundNearestInteger } from "./moneyRounding";
+import { roundHalfUp2 } from "./moneyRounding";
 import { openPDFInNewTab } from "./pdfUtils";
 import { AllowanceSlipPDF } from "@/components/pdf/AllowanceSlipPDF";
 import type { AllowanceSlipRow } from "@/components/pdf/AllowanceSlipPDF";
@@ -87,7 +87,7 @@ export function buildAllowanceSlipData({
       const presentDays = slice.days.length > 0 ? slice.presentDays : (w.attendance ?? 0);
       const nh = getNhDays(slice.days);
       const hra = roundHalfUp2(Number(employee.hra) || 0);
-      const earnedOtherCash = roundNearestInteger(w.otherCash ?? 0);
+      const earnedOtherCash = roundHalfUp2(w.otherCash ?? 0);
       const otherAllowance = roundHalfUp2(w.allowances ?? 0);
 
       const row: AllowanceSlipRow = {

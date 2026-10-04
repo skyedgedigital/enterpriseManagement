@@ -1,22 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector } from '@/hooks/useAppSelector';
-import {
-  deleteAdminDepartment,
-  fetchAdminDepartments,
-} from '@/store/slices/admin/adminDepartmentSlice';
+import { useDebouncedCollectionSearch } from '@/hooks/useDebouncedCollectionSearch';
+import { deleteAdminDepartment } from '@/store/slices/admin/adminDepartmentSlice';
 import type { AdminDepartment } from '@/types/admin';
 
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { DataTable, type Column } from '@/components/shared/DataTable';
-import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { DataTable, type Column } from '@/components/shared/DataTable';
+import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { BulkUploadDialog } from '@/components/shared/BulkUploadDialog';
 import { ExportExcelButton } from '@/components/shared/ExportExcelButton';
 import {
@@ -27,20 +25,27 @@ import {
 export function AdminDepartmentPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { items, loading } = useAppSelector((state) => state.adminDepartments);
+  const { loading } = useAppSelector((state) => state.adminDepartments);
+  const {
+    query,
+    setQuery,
+    items,
+    allItems,
+    initialLoading,
+    searchLoading,
+    removeResult,
+    reloadAll,
+  } = useDebouncedCollectionSearch<AdminDepartment>('adminDepartments');
   const [deleteTarget, setDeleteTarget] = useState<AdminDepartment | null>(
     null,
   );
-
-  useEffect(() => {
-    dispatch(fetchAdminDepartments());
-  }, [dispatch]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const result = await dispatch(deleteAdminDepartment(deleteTarget.id));
     if (deleteAdminDepartment.fulfilled.match(result)) {
       toast.success('Department deleted');
+      removeResult(deleteTarget.id);
       setDeleteTarget(null);
     } else {
       toast.error(result.payload as string);
@@ -51,13 +56,17 @@ export function AdminDepartmentPage() {
     { key: 'name', header: 'Department Name' },
   ];
 
-  if (loading && items.length === 0) return <LoadingState />;
+  if (initialLoading && allItems.length === 0) return <LoadingState />;
 
   return (
     <div className='space-y-6'>
       <PageHeader
         title='Departments'
-        description='Manage organization departments'
+        description={
+          query.trim()
+            ? `${items.length} match${items.length !== 1 ? 'es' : ''}`
+            : `${allItems.length} department${allItems.length !== 1 ? 's' : ''} total`
+        }
         action={
           <div className='flex gap-2'>
             <ExportExcelButton
@@ -66,7 +75,7 @@ export function AdminDepartmentPage() {
             />
             <BulkUploadDialog
               config={adminDepartmentBulkConfig}
-              onSuccess={() => dispatch(fetchAdminDepartments())}
+              onSuccess={() => { void reloadAll(); }}
             />
             <Button onClick={() => navigate('/admin/departments/new')}>
               <Plus className='h-4 w-4' />
@@ -76,7 +85,7 @@ export function AdminDepartmentPage() {
         }
       />
 
-      {items.length === 0 ? (
+      {allItems.length === 0 ? (
         <EmptyState
           title='No departments'
           description='Create your first department to get started.'
@@ -88,39 +97,40 @@ export function AdminDepartmentPage() {
           }
         />
       ) : (
-        <DataTable
-          data={items}
-          columns={columns}
-          searchKey='name'
-          searchPlaceholder='Search departments...'
-          actions={(dept) => (
-            <>
-              <Button
-                variant='ghost'
-                size='icon-sm'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/admin/departments/${dept.id}/edit`);
-                }}
-              >
-                <Pencil className='h-4 w-4' />
-              </Button>
-              <Button
-                variant='ghost'
-                size='icon-sm'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteTarget(dept);
-                }}
-              >
-                <Trash2 className='h-4 w-4 text-destructive' />
-              </Button>
-            </>
-          )}
-        />
+      <DataTable
+        data={items}
+        columns={columns}
+        searchPlaceholder='Search departments...'
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchLoading={searchLoading}
+        actions={(dept) => (
+          <>
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/admin/departments/${dept.id}/edit`);
+              }}
+            >
+              <Pencil className='h-4 w-4' />
+            </Button>
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteTarget(dept);
+              }}
+            >
+              <Trash2 className='h-4 w-4 text-destructive' />
+            </Button>
+          </>
+        )}
+      />
       )}
 
-      {/* Delete Confirmation */}
       <DeleteDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}

@@ -1,3 +1,6 @@
+import { formatMoney2 } from "@/lib/moneyRounding";
+import { ReportTotalsRow } from "./ReportTotalsRow";
+import { pfReportColumns } from "@/lib/reportPolicy";
 import { Document, Page, View, Text } from "@react-pdf/renderer";
 import { pdfStyles as s } from "./pdfStyles";
 import { formatMonthYear } from "@/lib/pdfUtils";
@@ -93,25 +96,25 @@ export function PFReportPDF({ rows, year, month, departmentName }: PFReportPDFPr
                   <Text>{row.employeeName}</Text>
                 </View>
                 <View style={[s.tableCell, { width: COL_WIDTHS.epf1 }, s.textRight]}>
-                  <Text>{row.epfWagesGross}</Text>
+                  <Text>{formatMoney2(row.epfWagesGross)}</Text>
                 </View>
                 <View style={[s.tableCell, { width: COL_WIDTHS.epf2 }, s.textRight]}>
-                  <Text>{row.epfWages}</Text>
+                  <Text>{formatMoney2(row.epfWages)}</Text>
                 </View>
                 <View style={[s.tableCell, { width: COL_WIDTHS.eps }, s.textRight]}>
-                  <Text>{row.epsWages}</Text>
+                  <Text>{formatMoney2(row.epsWages)}</Text>
                 </View>
                 <View style={[s.tableCell, { width: COL_WIDTHS.edli }, s.textRight]}>
-                  <Text>{row.edliWages}</Text>
+                  <Text>{formatMoney2(row.edliWages)}</Text>
                 </View>
                 <View style={[s.tableCell, { width: COL_WIDTHS.pf }, s.textRight]}>
                   <Text>{row.pf}</Text>
                 </View>
                 <View style={[s.tableCell, { width: COL_WIDTHS.epfAmt }, s.textRight]}>
-                  <Text>{row.epfAmount}</Text>
+                  <Text>{formatMoney2(row.epfAmount)}</Text>
                 </View>
                 <View style={[s.tableCell, { width: COL_WIDTHS.ppfAmt }, s.textRight]}>
-                  <Text>{row.ppfAmount}</Text>
+                  <Text>{formatMoney2(row.ppfAmount)}</Text>
                 </View>
                 <View style={[s.tableCell, { width: COL_WIDTHS.ncp }, s.textRight]}>
                   <Text>{row.ncpDays}</Text>
@@ -121,6 +124,7 @@ export function PFReportPDF({ rows, year, month, departmentName }: PFReportPDFPr
                 </View>
               </View>
             ))}
+            <ReportTotalsRow rows={rows} columns={pfReportColumns} widths={Object.values(COL_WIDTHS)} labelColumn={1} />
           </View>
         </View>
       </Page>

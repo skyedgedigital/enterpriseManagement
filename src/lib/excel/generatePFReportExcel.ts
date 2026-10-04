@@ -1,3 +1,5 @@
+import { pfReportColumns } from "@/lib/reportPolicy";
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { PFReportRow } from "@/lib/generatePFReport";
 import {
@@ -79,6 +81,8 @@ export async function generatePFReportExcel({
       sheet.getCell(r, c).style = { ...sheet.getCell(r, c).style, ...RIGHT_CELL_STYLE };
     }
   }
+
+  finishReportTable(sheet, 3, 2 + rows.length, pfReportColumns.map((column, index) => ({ column: index + 1, kind: column.kind })), 3 + rows.length, 2);
 
   await downloadExcel(workbook, reportFileName("PFReport", month, year));
 }

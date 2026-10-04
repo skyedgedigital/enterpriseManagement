@@ -8,7 +8,8 @@ import { Loader2, Save, ArrowLeft } from "lucide-react";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { addBank, updateBank, fetchBankById, clearSelectedBank } from "@/store/slices/bankSlice";
-import { bankSchema, type BankFormValues } from "@/lib/validators";
+import { bankService } from "@/services/bank.service";
+import { bankSchema, normalizeIfsc, type BankFormValues } from "@/lib/validators";
 
 import { BANK_NAMES } from "@/lib/constants";
 import { toSanitizedKey, getBankDisplayName } from "@/lib/sanitize";
@@ -28,7 +29,7 @@ export function BankFormPage() {
 
   const { selectedItem, loading } = useAppSelector((state) => state.banks);
 
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = useForm<BankFormValues>({
+  const { register, handleSubmit, reset, watch, setValue, setError, formState: { errors, isSubmitting } } = useForm<BankFormValues>({
     resolver: zodResolver(bankSchema),
   });
 
@@ -51,8 +52,16 @@ export function BankFormPage() {
   }, [isEditing, selectedItem, reset]);
 
   const onSubmit = async (data: BankFormValues) => {
+    const ifsc = normalizeIfsc(data.ifsc);
+    const unique = await bankService.isIfscUnique(ifsc, isEditing ? id : undefined);
+    if (!unique) {
+      setError("ifsc", { message: `IFSC "${ifsc}" already exists` });
+      return;
+    }
+    const payload = { ...data, ifsc };
+
     if (isEditing && id) {
-      const result = await dispatch(updateBank({ id, data }));
+      const result = await dispatch(updateBank({ id, data: payload }));
       if (updateBank.fulfilled.match(result)) {
         toast.success("Bank updated successfully");
         navigate("/banks");
@@ -60,7 +69,7 @@ export function BankFormPage() {
         toast.error(result.payload as string);
       }
     } else {
-      const result = await dispatch(addBank(data));
+      const result = await dispatch(addBank(payload));
       if (addBank.fulfilled.match(result)) {
         toast.success("Bank created successfully");
         navigate("/banks");
@@ -113,7 +122,14 @@ export function BankFormPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ifsc">IFSC Code *</Label>
-                <Input id="ifsc" {...register("ifsc")} placeholder="Enter IFSC code" maxLength={11} />
+                <Input
+                  id="ifsc"
+                  {...register("ifsc")}
+                  placeholder="e.g. SBIN0001234"
+                  maxLength={11}
+                  className="uppercase"
+                  onChange={(e) => setValue("ifsc", normalizeIfsc(e.target.value), { shouldValidate: true })}
+                />
                 {errors.ifsc && <p className="text-sm text-destructive">{errors.ifsc.message}</p>}
               </div>
             </div>

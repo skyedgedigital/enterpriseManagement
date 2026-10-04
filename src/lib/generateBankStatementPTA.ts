@@ -99,7 +99,7 @@ function getMonthlyNetForStatement(
     workOrder?.newPfApplicable ?? false,
   );
 
-  return Math.round(computed.netPayment);
+  return computed.netPayment;
 }
 
 export async function generateBankStatementPTA({

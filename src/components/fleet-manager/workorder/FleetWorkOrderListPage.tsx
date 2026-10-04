@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ListOrdered,
@@ -19,18 +19,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector } from '@/hooks/useAppSelector';
-import {
-  fetchFleetWorkOrders,
-  deleteFleetWorkOrder,
-} from '@/store/slices/fleet-manager/workOrderSlice';
+import { useDebouncedCollectionSearch } from '@/hooks/useDebouncedCollectionSearch';
+import { deleteFleetWorkOrder } from '@/store/slices/fleet-manager/workOrderSlice';
 import type { FleetWorkOrder } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { DataTable, type Column } from '@/components/shared/DataTable';
-import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { DataTable, type Column } from '@/components/shared/DataTable';
+import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { BulkUploadDialog } from '@/components/shared/BulkUploadDialog';
 import { createFleetWorkOrderBulkConfig } from '@/lib/excel/bulkUpload/fleetConfigs';
 import { FleetWorkOrderExportButton } from '@/components/fleet-manager/shared/FleetWorkOrderExportButton';
@@ -56,21 +54,28 @@ function formatValidity(v: FleetWorkOrder['workOrderValidity']): string {
 export function FleetWorkOrderListPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { items, loading } = useAppSelector((s) => s.fleetWorkOrders);
+  const { loading } = useAppSelector((s) => s.fleetWorkOrders);
+  const {
+    query,
+    setQuery,
+    items,
+    allItems,
+    initialLoading,
+    searchLoading,
+    removeResult,
+    reloadAll,
+  } = useDebouncedCollectionSearch<FleetWorkOrder>('fleetWorkOrders');
   const [deleteTarget, setDeleteTarget] = useState<FleetWorkOrder | null>(null);
   const [itemsSheetWo, setItemsSheetWo] = useState<FleetWorkOrder | null>(null);
   const [uomDialogRow, setUomDialogRow] = useState<FleetWorkOrder | null>(null);
   const fleetWorkOrderBulkConfig = useMemo(() => createFleetWorkOrderBulkConfig(), []);
-
-  useEffect(() => {
-    void dispatch(fetchFleetWorkOrders());
-  }, [dispatch]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const result = await dispatch(deleteFleetWorkOrder(deleteTarget.id));
     if (deleteFleetWorkOrder.fulfilled.match(result)) {
       toast.success('Fleet work order deleted');
+      removeResult(deleteTarget.id);
       setDeleteTarget(null);
     } else toast.error(result.payload as string);
   };
@@ -108,21 +113,23 @@ export function FleetWorkOrderListPage() {
     },
   ];
 
-  if (loading && items.length === 0) {
-    return <LoadingState />;
-  }
+  if (initialLoading && allItems.length === 0) return <LoadingState />;
 
   return (
     <div className='space-y-6'>
       <PageHeader
         title='Fleet work orders'
-        description={`${items.length} work order${items.length !== 1 ? 's' : ''} (fleet)`}
+        description={
+          query.trim()
+            ? `${items.length} match${items.length !== 1 ? 'es' : ''}`
+            : `${allItems.length} fleet work order${allItems.length !== 1 ? 's' : ''}`
+        }
         action={
           <div className="flex gap-2">
             <FleetWorkOrderExportButton workOrders={items} />
             <BulkUploadDialog
               config={fleetWorkOrderBulkConfig}
-              onSuccess={() => void dispatch(fetchFleetWorkOrders())}
+              onSuccess={() => { void reloadAll(); }}
             />
             <Button onClick={() => navigate('/fleet-manager/work-orders/new')}>
               <Plus className='h-4 w-4' />
@@ -132,10 +139,10 @@ export function FleetWorkOrderListPage() {
         }
       />
 
-      {items.length === 0 ? (
+      {allItems.length === 0 ? (
         <EmptyState
           title='No fleet work orders'
-          description='Create a fleet work order to track value, items, and units of measure.'
+          description='Create your first fleet work order.'
           action={
             <Button onClick={() => navigate('/fleet-manager/work-orders/new')}>
               <Plus className='h-4 w-4' />
@@ -144,62 +151,64 @@ export function FleetWorkOrderListPage() {
           }
         />
       ) : (
-        <DataTable
-          data={items}
-          columns={columns}
-          searchKey='workOrderNumber'
-          searchPlaceholder='Search by WO number...'
-          actions={(row) => (
-            <div
-              className='flex items-center justify-end gap-0.5'
-              onClick={(e) => e.stopPropagation()}
+      <DataTable
+        data={items}
+        columns={columns}
+        searchPlaceholder='Search by WO number...'
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchLoading={searchLoading}
+        actions={(row) => (
+          <div
+            className='flex items-center justify-end gap-0.5'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              className='shrink-0 border border-gray-200 rounded-sm'
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/fleet-manager/work-orders/${row.id}/edit`);
+              }}
+              aria-label='Edit fleet work order'
             >
-              <Button
-                variant='ghost'
-                size='icon-sm'
-                className='shrink-0 border border-gray-200 rounded-sm'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/fleet-manager/work-orders/${row.id}/edit`);
-                }}
-                aria-label='Edit fleet work order'
-              >
-                <Pencil className='h-4 w-4' />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant='ghost'
-                    size='icon-sm'
-                    className='shrink-0 border border-gray-200 rounded-sm'
-                    aria-label='More actions'
-                  >
-                    <MoreHorizontal className='h-4 w-4' />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align='end'>
-                  <DropdownMenuItem
-                    onSelect={() => setItemsSheetWo(row)}
-                  >
-                    <ListOrdered className='h-4 w-4' />
-                    View items
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setUomDialogRow(row)}>
-                    <Ruler className='h-4 w-4' />
-                    View UOMs
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    variant='destructive'
-                    onSelect={() => setDeleteTarget(row)}
-                  >
-                    <Trash2 className='h-4 w-4' />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
-        />
+              <Pencil className='h-4 w-4' />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon-sm'
+                  className='shrink-0 border border-gray-200 rounded-sm'
+                  aria-label='More actions'
+                >
+                  <MoreHorizontal className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem
+                  onSelect={() => setItemsSheetWo(row)}
+                >
+                  <ListOrdered className='h-4 w-4' />
+                  View items
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setUomDialogRow(row)}>
+                  <Ruler className='h-4 w-4' />
+                  View UOMs
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  variant='destructive'
+                  onSelect={() => setDeleteTarget(row)}
+                >
+                  <Trash2 className='h-4 w-4' />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+      />
       )}
 
       <FleetWorkOrderItemsSheet

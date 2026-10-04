@@ -1,8 +1,9 @@
 import {
-  collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where, orderBy,
+  collection, getDocs, getDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where, orderBy, runTransaction,
 } from "firebase/firestore";
 import { db } from "@/config/firebase";
 import { COLLECTIONS } from "@/lib/constants";
+import { readNextEmployeeCode, writeEmployeeCodeCounter } from "@/services/employeeCode.service";
 import { commitBatchedSetsResilient, omitUndefined } from "@/services/shared";
 import type { Employee } from "@/types";
 
@@ -48,9 +49,13 @@ export const employeeService = {
   },
 
   create: async (data: Omit<Employee, "id">): Promise<Employee> => {
-    const payload = buildEmployeeWritePayload(data);
-    const docRef = await addDoc(colRef, payload);
-    return { id: docRef.id, ...data };
+    return runTransaction(db, async (tx) => {
+      const { code, lastNumber } = await readNextEmployeeCode(tx);
+      writeEmployeeCodeCounter(tx, lastNumber);
+      const employeeRef = doc(colRef);
+      tx.set(employeeRef, buildEmployeeWritePayload({ ...data, code }));
+      return { id: employeeRef.id, ...data, code };
+    });
   },
 
   /** Bulk insert for Excel upload — uses Firestore batched writes (500 per commit). */

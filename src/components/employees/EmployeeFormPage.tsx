@@ -14,7 +14,7 @@ import { fetchBanks } from "@/store/slices/bankSlice";
 import { fetchSites } from "@/store/slices/siteSlice";
 import { fetchEsiLocations } from "@/store/slices/esiLocationSlice";
 import { employeeSchema, type EmployeeFormValues } from "@/lib/validators";
-import { getNextEmployeeCode, isEmployeeCodeUnique } from "@/services/employeeCode.service";
+import { isEmployeeCodeUnique, peekNextEmployeeCode } from "@/services/employeeCode.service";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,9 +62,18 @@ export function EmployeeFormPage() {
   }, [dispatch, id, isEditing]);
 
   useEffect(() => {
-    if (!isEditing) {
-      getNextEmployeeCode().then((code) => methods.setValue("code", code));
-    }
+    if (isEditing) return;
+    let cancelled = false;
+    peekNextEmployeeCode()
+      .then((code) => {
+        if (!cancelled) methods.setValue("code", code);
+      })
+      .catch((error) => {
+        console.error("Failed to preview employee code", error);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [isEditing, methods]);
 
   useEffect(() => {
@@ -125,17 +134,17 @@ export function EmployeeFormPage() {
   }, [isEditing, selectedEmployee, methods]);
 
   const onSubmit = async (data: EmployeeFormValues) => {
-    const unique = await isEmployeeCodeUnique(data.code, isEditing ? id : undefined);
-    if (!unique) {
-      toast.error("Employee code is already in use. Please use a unique code.");
-      return;
-    }
     const payload = {
       ...data,
       ...docUrls,
     };
 
     if (isEditing && id) {
+      const unique = await isEmployeeCodeUnique(data.code, id);
+      if (!unique) {
+        toast.error("Employee code is already in use. Please use a unique code.");
+        return;
+      }
       const result = await dispatch(updateEmployee({ id, data: payload }));
       if (updateEmployee.fulfilled.match(result)) {
         toast.success("Employee updated successfully");

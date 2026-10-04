@@ -268,13 +268,13 @@ export function PaymentModal({
                   <TableCell className="text-right">{breakdown.totalWorkingDays}</TableCell>
                   <TableCell className="text-right">{formatMoney2(breakdown.basicRate)}</TableCell>
                   <TableCell className="text-right">{formatMoney2(breakdown.daRate)}</TableCell>
-                  <TableCell className="text-right">{roundNearestInteger(breakdown.overtime)}</TableCell>
-                  <TableCell className="text-right">{roundNearestInteger(breakdown.otherCash)}</TableCell>
+                  <TableCell className="text-right">{formatMoney2(breakdown.overtime)}</TableCell>
+                  <TableCell className="text-right">{formatMoney2(breakdown.otherCash)}</TableCell>
                   <TableCell className="text-right">{formatMoney2(breakdown.allowances)}</TableCell>
-                  <TableCell className="text-right">{roundNearestInteger(breakdown.resultant2)}</TableCell>
+                  <TableCell className="text-right">{formatMoney2(breakdown.resultant2)}</TableCell>
                   <TableCell className="text-right">{roundNearestInteger(breakdown.pf)}</TableCell>
                   <TableCell className="text-right">{roundNearestInteger(breakdown.esi)}</TableCell>
-                  <TableCell className="text-right">{roundNearestInteger(breakdown.otherDeduction)}</TableCell>
+                  <TableCell className="text-right">{formatMoney2(breakdown.otherDeduction)}</TableCell>
                   <TableCell className="text-right font-medium">
                     ₹{roundNearestInteger(breakdown.netPayment).toLocaleString()}
                   </TableCell>

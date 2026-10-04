@@ -59,7 +59,7 @@ export function buildArrearBankStatementData(
 
     if (breakdown.resultant1 <= 0) continue;
 
-    const netAmount = Math.round(breakdown.netPayment);
+    const netAmount = breakdown.netPayment;
     const bank = employee.bank ? banks.find((b) => b.id === employee.bank) ?? null : null;
 
     included.push({

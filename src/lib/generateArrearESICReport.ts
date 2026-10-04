@@ -1,4 +1,4 @@
-import { roundNearestInteger } from "./moneyRounding";
+import { roundHalfUp2 } from "./moneyRounding";
 import {
   buildArrearAccumulator,
   type ArrearRowFilter,
@@ -57,7 +57,7 @@ export function buildArrearESICReport(
       ipNumber: to10DigitIPNumber(employee.esicNo),
       ipName: (employee.name?.trim() || employee.code || "").toUpperCase(),
       daysPaid: totalDays,
-      totalMonthlyWage: roundNearestInteger(totalMonthlyWage),
+      totalMonthlyWage: roundHalfUp2(totalMonthlyWage),
     });
   }
 

@@ -1,9 +1,4 @@
-import { useEffect } from 'react';
-
-import { useAppDispatch } from '@/hooks/useAppDispatch';
-import { useAppSelector } from '@/hooks/useAppSelector';
-import { fetchWorkOrders } from '@/store/slices/workOrderSlice';
-import { fetchFleetWorkOrders } from '@/store/slices/fleet-manager/workOrderSlice';
+import { useDebouncedCollectionSearch } from '@/hooks/useDebouncedCollectionSearch';
 
 import { PageHeader } from '@/components/shared/PageHeader';
 import { LoadingState } from '@/components/shared/LoadingState';
@@ -11,24 +6,24 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable, type Column } from '@/components/shared/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
 
 import type { WorkOrder, FleetWorkOrder } from '@/types';
 import { formatTimestamp } from '@/components/shared/utils';
 
-// ----------------------------------------------------------------
-// Helpers
-// ----------------------------------------------------------------
 const fmtAmt = (n?: number) =>
   n !== undefined
     ? '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2 })
     : '—';
 
-// ----------------------------------------------------------------
-// HR Work Orders tab
-// ----------------------------------------------------------------
 function HRWorkOrdersTab() {
-  const { items, loading } = useAppSelector((state) => state.workOrders);
+  const {
+    query,
+    setQuery,
+    items,
+    allItems,
+    initialLoading,
+    searchLoading,
+  } = useDebouncedCollectionSearch<WorkOrder>('workOrders');
 
   const columns: Column<WorkOrder>[] = [
     {
@@ -69,28 +64,38 @@ function HRWorkOrdersTab() {
     },
   ];
 
-  if (loading && items.length === 0) return <LoadingState />;
+  if (initialLoading && allItems.length === 0) return <LoadingState />;
 
-  return items.length === 0 ? (
-    <EmptyState
-      title='No HR work orders'
-      description='No HR work orders found.'
-    />
-  ) : (
+  if (allItems.length === 0) {
+    return (
+      <EmptyState
+        title='No HR work orders'
+        description='No HR work orders have been added yet.'
+      />
+    );
+  }
+
+  return (
     <DataTable
       data={items}
       columns={columns}
-      searchKey='workOrderNumber'
       searchPlaceholder='Search HR work orders...'
+      searchValue={query}
+      onSearchChange={setQuery}
+      searchLoading={searchLoading}
     />
   );
 }
 
-// ----------------------------------------------------------------
-// Fleet Work Orders tab
-// ----------------------------------------------------------------
 function FleetWorkOrdersTab() {
-  const { items, loading } = useAppSelector((state) => state.fleetWorkOrders);
+  const {
+    query,
+    setQuery,
+    items,
+    allItems,
+    initialLoading,
+    searchLoading,
+  } = useDebouncedCollectionSearch<FleetWorkOrder>('fleetWorkOrders');
 
   const columns: Column<FleetWorkOrder>[] = [
     {
@@ -146,103 +151,41 @@ function FleetWorkOrdersTab() {
     },
   ];
 
-  if (loading && items.length === 0) return <LoadingState />;
+  if (initialLoading && allItems.length === 0) return <LoadingState />;
 
-  return items.length === 0 ? (
-    <EmptyState
-      title='No Fleet work orders'
-      description='No Fleet work orders found.'
-    />
-  ) : (
+  if (allItems.length === 0) {
+    return (
+      <EmptyState
+        title='No fleet work orders'
+        description='No fleet work orders have been added yet.'
+      />
+    );
+  }
+
+  return (
     <DataTable
       data={items}
       columns={columns}
-      searchKey='workOrderNumber'
       searchPlaceholder='Search Fleet work orders...'
+      searchValue={query}
+      onSearchChange={setQuery}
+      searchLoading={searchLoading}
     />
   );
 }
 
-// ----------------------------------------------------------------
-// Main Page
-// ----------------------------------------------------------------
 export function AdminWorkOrdersPage() {
-  const dispatch = useAppDispatch();
-
-  const hrItems = useAppSelector((state) => state.workOrders.items);
-  const fleetItems = useAppSelector((state) => state.fleetWorkOrders.items);
-  const hrLoading = useAppSelector((state) => state.workOrders.loading);
-  const fleetLoading = useAppSelector((state) => state.fleetWorkOrders.loading);
-
-  useEffect(() => {
-    dispatch(fetchWorkOrders());
-    dispatch(fetchFleetWorkOrders());
-  }, [dispatch]);
-
-  const isLoading =
-    hrLoading &&
-    hrItems.length === 0 &&
-    fleetLoading &&
-    fleetItems.length === 0;
-
-  if (isLoading) return <LoadingState />;
-
   return (
     <div className='space-y-6'>
       <PageHeader
         title='Work Orders'
-        description='View HR and Fleet Manager work orders'
+        description='HR and Fleet Manager work orders'
       />
 
-      {/* Summary cards */}
-      <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
-        <Card className='border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950'>
-          <CardContent className='p-4'>
-            <p className='text-xs text-muted-foreground'>HR Work Orders</p>
-            <p className='text-2xl font-bold text-blue-600 dark:text-blue-400'>
-              {hrItems.length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className='border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950'>
-          <CardContent className='p-4'>
-            <p className='text-xs text-muted-foreground'>Fleet Work Orders</p>
-            <p className='text-2xl font-bold text-green-600 dark:text-green-400'>
-              {fleetItems.length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className='border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950'>
-          <CardContent className='p-4'>
-            <p className='text-xs text-muted-foreground'>Fleet Total Value</p>
-            <p className='text-xl font-bold text-orange-600 dark:text-orange-400'>
-              {fmtAmt(
-                fleetItems.reduce((s, wo) => s + (wo.workOrderValue ?? 0), 0),
-              )}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className='border-purple-200 bg-purple-50 dark:border-purple-900 dark:bg-purple-950'>
-          <CardContent className='p-4'>
-            <p className='text-xs text-muted-foreground'>Fleet Balance</p>
-            <p className='text-xl font-bold text-purple-600 dark:text-purple-400'>
-              {fmtAmt(
-                fleetItems.reduce((s, wo) => s + (wo.workOrderBalance ?? 0), 0),
-              )}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabbed content */}
       <Tabs defaultValue='fleet'>
         <TabsList>
-          <TabsTrigger value='fleet'>
-            Fleet Work Orders ({fleetItems.length})
-          </TabsTrigger>
-          <TabsTrigger value='hr'>
-            HR Work Orders ({hrItems.length})
-          </TabsTrigger>
+          <TabsTrigger value='fleet'>Fleet Work Orders</TabsTrigger>
+          <TabsTrigger value='hr'>HR Work Orders</TabsTrigger>
         </TabsList>
 
         <TabsContent value='fleet' className='mt-4'>
