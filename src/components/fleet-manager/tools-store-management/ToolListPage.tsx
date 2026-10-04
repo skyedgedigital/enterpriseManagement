@@ -1,22 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector } from '@/hooks/useAppSelector';
-import {
-  deleteTool,
-  fetchTools,
-} from '@/store/slices/fleet-manager/toolStoreManagementSlice';
+import { useDebouncedCollectionSearch } from '@/hooks/useDebouncedCollectionSearch';
+import { deleteTool } from '@/store/slices/fleet-manager/toolStoreManagementSlice';
 import type { Tool } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { DataTable, type Column } from '@/components/shared/DataTable';
-import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { DataTable, type Column } from '@/components/shared/DataTable';
+import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { BulkUploadDialog } from '@/components/shared/BulkUploadDialog';
 import { ExportExcelButton } from '@/components/shared/ExportExcelButton';
 import { toolBulkConfig } from '@/lib/excel/bulkUpload/fleetConfigs';
@@ -25,18 +23,25 @@ import { toolExportConfig } from '@/lib/excel/bulkUpload/fleetExportConfigs';
 export function ToolListPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { tools, loading } = useAppSelector((state) => state.tools);
+  const { loading } = useAppSelector((state) => state.tools);
+  const {
+    query,
+    setQuery,
+    items,
+    allItems,
+    initialLoading,
+    searchLoading,
+    removeResult,
+    reloadAll,
+  } = useDebouncedCollectionSearch<Tool>('tools');
   const [deleteTarget, setDeleteTarget] = useState<Tool | null>(null);
-
-  useEffect(() => {
-    dispatch(fetchTools());
-  }, [dispatch]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const result = await dispatch(deleteTool(deleteTarget.id));
     if (deleteTool.fulfilled.match(result)) {
       toast.success('Tool deleted');
+      removeResult(deleteTarget.id);
       setDeleteTarget(null);
     } else {
       toast.error(result.payload as string);
@@ -57,19 +62,23 @@ export function ToolListPage() {
     },
   ];
 
-  if (loading && tools.length === 0) return <LoadingState />;
+  if (initialLoading && allItems.length === 0) return <LoadingState />;
 
   return (
     <div className='space-y-6'>
       <PageHeader
         title='Tools'
-        description='Manage tools inventory'
+        description={
+          query.trim()
+            ? `${items.length} match${items.length !== 1 ? 'es' : ''}`
+            : `${allItems.length} tool${allItems.length !== 1 ? 's' : ''} total`
+        }
         action={
           <div className="flex gap-2">
-            <ExportExcelButton config={toolExportConfig} items={tools} />
+            <ExportExcelButton config={toolExportConfig} items={items} />
             <BulkUploadDialog
               config={toolBulkConfig}
-              onSuccess={() => dispatch(fetchTools())}
+              onSuccess={() => { void reloadAll(); }}
             />
             <Button
               onClick={() =>
@@ -83,9 +92,9 @@ export function ToolListPage() {
         }
       />
 
-      {tools.length === 0 ? (
+      {allItems.length === 0 ? (
         <EmptyState
-          title='No Tools'
+          title='No tools'
           description='Add your first tool to get started.'
           action={
             <Button
@@ -99,38 +108,40 @@ export function ToolListPage() {
           }
         />
       ) : (
-        <DataTable
-          data={tools}
-          columns={columns}
-          searchKey='toolName'
-          searchPlaceholder='Search tools...'
-          actions={(tool) => (
-            <>
-              <Button
-                variant='ghost'
-                size='icon-sm'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(
-                    `/fleet-manager/store-management/tools/${tool.id}/edit`,
-                  );
-                }}
-              >
-                <Pencil className='h-4 w-4' />
-              </Button>
-              <Button
-                variant='ghost'
-                size='icon-sm'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteTarget(tool);
-                }}
-              >
-                <Trash2 className='h-4 w-4 text-destructive' />
-              </Button>
-            </>
-          )}
-        />
+      <DataTable
+        data={items}
+        columns={columns}
+        searchPlaceholder='Search tools...'
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchLoading={searchLoading}
+        actions={(tool) => (
+          <>
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(
+                  `/fleet-manager/store-management/tools/${tool.id}/edit`,
+                );
+              }}
+            >
+              <Pencil className='h-4 w-4' />
+            </Button>
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteTarget(tool);
+              }}
+            >
+              <Trash2 className='h-4 w-4 text-destructive' />
+            </Button>
+          </>
+        )}
+      />
       )}
 
       <DeleteDialog

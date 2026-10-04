@@ -1,8 +1,11 @@
+import { formatMoneyWhole } from "@/lib/moneyRounding";
+import { SIGNING, signingWidths } from "@/lib/reportPolicy";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { BonusRegisterData } from "@/lib/buildBonusRegisterData";
 import { computeBonusRegisterFooterTotals } from "@/lib/buildBonusRegisterData";
 
 const ROWS_PER_PAGE = 7;
+const COL_WIDTHS = signingWidths([2.5,9,9,3.5,8,4,8,8,5,5,5,5,8,6,6,7], 824.89, [15]);
 
 const s = StyleSheet.create({
   page: {
@@ -59,7 +62,7 @@ const s = StyleSheet.create({
   orderLine: { fontSize: 7.5, textAlign: "right", marginTop: 2 },
   pageFooter: { fontSize: 6.5, textAlign: "center", marginTop: 4 },
   table: { borderWidth: 0.5, borderColor: "#000", marginTop: 4 },
-  row: { flexDirection: "row", borderBottomWidth: 0.25, borderColor: "#000" },
+  row: { minHeight: SIGNING.rowHeight, flexDirection: "row", borderBottomWidth: 0.25, borderColor: "#000" },
   tableHeaderRow: {
     flexDirection: "row",
     backgroundColor: "#e8e8e8",
@@ -95,20 +98,20 @@ const s = StyleSheet.create({
   },
   cellCenter: { textAlign: "center" },
   cellRight: { textAlign: "right" },
-  colSl: { width: "2.5%" },
-  colName: { width: "9%" },
-  colFather: { width: "9%" },
-  col15: { width: "3.5%" },
-  colDesg: { width: "8%" },
-  colDays: { width: "4%" },
-  colAmt: { width: "8%" },
-  colDed: { width: "5%" },
-  colTotDed: { width: "5%" },
-  colNet: { width: "8%" },
-  colPaid: { width: "6%" },
-  colDate: { width: "6%" },
-  colSign: { width: "7%" },
-  dedGroup: { width: "15%" },
+  colSl: { width: COL_WIDTHS[0] },
+  colName: { width: COL_WIDTHS[1] },
+  colFather: { width: COL_WIDTHS[2] },
+  col15: { width: COL_WIDTHS[3] },
+  colDesg: { width: COL_WIDTHS[4] },
+  colDays: { width: COL_WIDTHS[5] },
+  colAmt: { width: COL_WIDTHS[6] },
+  colDed: { width: COL_WIDTHS[8] },
+  colTotDed: { width: COL_WIDTHS[11] },
+  colNet: { width: COL_WIDTHS[12] },
+  colPaid: { width: COL_WIDTHS[13] },
+  colDate: { width: COL_WIDTHS[14] },
+  colSign: { width: COL_WIDTHS[15] },
+  dedGroup: { width: COL_WIDTHS.slice(8,11).reduce((a,b)=>a+b,0) },
 });
 
 function fmtDays(n: number): string {
@@ -343,10 +346,10 @@ export function BonusRegisterPDF({ data }: BonusRegisterPDFProps) {
                   <Text>{fmtAmount2(row.totalSumDeducted)}</Text>
                 </View>
                 <View style={[s.cell, s.colNet, s.cellRight]}>
-                  <Text>{fmtAmount2(row.netPayableAmount)}</Text>
+                  <Text>{formatMoneyWhole(row.netPayableAmount)}</Text>
                 </View>
                 <View style={[s.cell, s.colPaid, s.cellRight]}>
-                  <Text>{fmtAmount2(row.netPayableAmount)}</Text>
+                  <Text>{formatMoneyWhole(row.netPayableAmount)}</Text>
                 </View>
                 <View style={[s.cell, s.colDate, s.cellCenter]}>
                   <Text> </Text>
@@ -396,10 +399,10 @@ export function BonusRegisterPDF({ data }: BonusRegisterPDFProps) {
                   <Text>{fmtAmount2(footer.sumTotalDeducted)}</Text>
                 </View>
                 <View style={[s.cell, s.colNet, s.cellRight]}>
-                  <Text>{fmtAmount2(footer.sumNetPayable)}</Text>
+                  <Text>{formatMoneyWhole(footer.sumNetPayable)}</Text>
                 </View>
                 <View style={[s.cell, s.colPaid, s.cellRight]}>
-                  <Text>{fmtAmount2(footer.sumNetPayable)}</Text>
+                  <Text>{formatMoneyWhole(footer.sumNetPayable)}</Text>
                 </View>
                 <View style={[s.cell, s.colDate]}>
                   <Text />

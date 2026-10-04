@@ -10,6 +10,7 @@ import {
   departmentSchema,
   designationSchema,
   esiLocationSchema,
+  normalizeIfsc,
   siteSchema,
   workOrderSchema,
 } from '@/lib/validators';
@@ -47,6 +48,7 @@ import {
   parseRequiredBool,
   parseRequiredNumber,
   findWorkOrderByNumber,
+  workOrderMatchKey,
 } from './utils';
 
 // ============================================================
@@ -166,26 +168,50 @@ export const designationBulkConfig: BulkUploadConfig<
 // Bank
 // ============================================================
 
+/** Strip location suffixes like "(BAMANGORA)" and codes like "[1150]". */
+function stripBankNameDecorations(raw: string): string {
+  return raw
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function bankNameKey(raw: string): string {
+  return toSanitizedKey(stripBankNameDecorations(raw) || raw);
+}
+
 function resolveBankName(raw: string): string | undefined {
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
 
-  // validate banke name from uploaded banks later
+  const variants = [trimmed, stripBankNameDecorations(trimmed)].filter(
+    (value, index, all) => value && all.indexOf(value) === index,
+  );
 
-  // const byDisplay = BANK_NAMES.find(
-  //   (name) => name.toLowerCase() === trimmed.toLowerCase(),
-  // );
-  // if (byDisplay) return toSanitizedKey(byDisplay);
-  // const byKey = BANK_NAMES.find(
-  //   (name) => toSanitizedKey(name) === trimmed.toLowerCase(),
-  // );
-  // return byKey ? toSanitizedKey(byKey) : undefined;
+  for (const candidate of variants) {
+    const byDisplay = BANK_NAMES.find(
+      (name) => name.toLowerCase() === candidate.toLowerCase(),
+    );
+    if (byDisplay) return toSanitizedKey(byDisplay);
 
-  // TODO: remove this if select bank name is implemented
-  return trimmed;
+    const candidateKey = toSanitizedKey(candidate);
+    const byKey = BANK_NAMES.find((name) => toSanitizedKey(name) === candidateKey);
+    if (byKey) return toSanitizedKey(byKey);
+  }
+
+  const inputKey = bankNameKey(trimmed);
+  let best: string | undefined;
+  for (const name of BANK_NAMES) {
+    const key = toSanitizedKey(name);
+    if (inputKey === key || inputKey.startsWith(`${key}_`)) {
+      if (!best || key.length > best.length) best = key;
+    }
+  }
+  return best;
 }
 
-export const bankBulkConfig: BulkUploadConfig<Omit<Bank, 'id'>, null> = {
+export const bankBulkConfig: BulkUploadConfig<Omit<Bank, 'id'>, Bank[]> = {
   entityName: 'Banks',
   templateFileName: 'Banks_Bulk_Upload_Template.xlsx',
   columns: [
@@ -200,10 +226,10 @@ export const bankBulkConfig: BulkUploadConfig<Omit<Bank, 'id'>, null> = {
       header: 'IFSC',
       required: true,
       example: 'SBIN0001234',
-      hint: '11 characters',
+      hint: '11 characters, unique (e.g. SBIN0001234)',
     },
   ],
-  validateRow(row, rowIndex) {
+  validateRow(row, rowIndex, banks) {
     const result: BulkUploadRowResult<Omit<Bank, 'id'>> = {
       rowIndex,
       errors: [],
@@ -227,15 +253,54 @@ export const bankBulkConfig: BulkUploadConfig<Omit<Bank, 'id'>, null> = {
       result.errors.push(parsed.error.issues[0]?.message ?? 'Invalid bank');
       return result;
     }
+    const ifsc = parsed.data.ifsc;
+    if (
+      (banks ?? []).some((b) => normalizeIfsc(b.ifsc) === ifsc)
+    ) {
+      result.errors.push(`IFSC "${ifsc}" already exists`);
+      return result;
+    }
     result.data = parsed.data;
     return result;
+  },
+  validateWorkbook(workbook, banks) {
+    const rows = workbook['Data'] ?? [];
+    const seen = new Map<string, number>();
+    return rows.map((row, index) => {
+      const result = bankBulkConfig.validateRow(row, index + 2, banks);
+      if (result.data && result.errors.length === 0) {
+        const ifsc = result.data.ifsc;
+        const previousRow = seen.get(ifsc);
+        if (previousRow) {
+          return {
+            rowIndex: result.rowIndex,
+            errors: [
+              `IFSC "${ifsc}" is duplicated in this file (row ${previousRow})`,
+            ],
+          };
+        }
+        seen.set(ifsc, result.rowIndex);
+      }
+      return result;
+    });
   },
   async importRows(rows) {
     let success = 0;
     const errors: string[] = [];
+    const existing = new Set(
+      (await bankService.getAll()).map((b) => normalizeIfsc(b.ifsc)),
+    );
+    const seen = new Set<string>();
     for (const row of rows) {
+      const ifsc = normalizeIfsc(row.ifsc);
+      if (existing.has(ifsc) || seen.has(ifsc)) {
+        errors.push(`IFSC "${ifsc}" already exists`);
+        continue;
+      }
       try {
         await bankService.create(row);
+        seen.add(ifsc);
+        existing.add(ifsc);
         success += 1;
       } catch (err) {
         errors.push(
@@ -598,7 +663,7 @@ export const employeeBulkColumns = [
   },
 ];
 
-/** resolve bank id from bank name, branch and ifsc */
+/** resolve bank id from IFSC (unique), preferring a matching sanitized bank name */
 function resolveBankId(
   context: EmployeeBulkContext,
   bankName: string,
@@ -606,18 +671,59 @@ function resolveBankId(
   ifsc: string,
 ): string | undefined {
   if (!bankName.trim() && !branch.trim() && !ifsc.trim()) return undefined;
-  if (!bankName.trim() || !branch.trim() || !ifsc.trim()) return undefined;
+
+  const ifscKey = ifsc.replace(/\s+/g, '').toUpperCase();
+  if (!ifscKey) return undefined;
+
+  const byIfsc = context.banks.filter(
+    (b) => b.ifsc.replace(/\s+/g, '').toUpperCase() === ifscKey,
+  );
+  if (byIfsc.length === 0) return undefined;
 
   const sanitized = resolveBankName(bankName);
-  if (!sanitized) return undefined;
+  if (sanitized) {
+    const named = byIfsc.find((b) => bankNameKey(b.name) === sanitized);
+    if (named) return named.id;
+  }
 
-  const match = context.banks.find(
-    (b) =>
-      b.name === sanitized &&
-      b.branch.trim().toLowerCase() === branch.trim().toLowerCase() &&
-      b.ifsc.trim().toUpperCase() === ifsc.trim().toUpperCase(),
-  );
-  return match?.id;
+  return byIfsc[0]?.id;
+}
+
+const PENDING_BANK_PREFIX = '__pendingBank:';
+const PENDING_WO_PREFIX = '__pendingWo:';
+
+function encodePendingBank(bank: Omit<Bank, 'id'>): string {
+  return `${PENDING_BANK_PREFIX}${JSON.stringify(bank)}`;
+}
+
+function decodePendingBank(value: string): Omit<Bank, 'id'> | undefined {
+  if (!value.startsWith(PENDING_BANK_PREFIX)) return undefined;
+  try {
+    return JSON.parse(value.slice(PENDING_BANK_PREFIX.length)) as Omit<Bank, 'id'>;
+  } catch {
+    return undefined;
+  }
+}
+
+function encodePendingWorkOrder(number: string): string {
+  return `${PENDING_WO_PREFIX}${number}`;
+}
+
+function decodePendingWorkOrder(value: string): string | undefined {
+  if (!value.startsWith(PENDING_WO_PREFIX)) return undefined;
+  return value.slice(PENDING_WO_PREFIX.length);
+}
+
+function buildPendingBank(
+  bankName: string,
+  branch: string,
+  ifsc: string,
+): Omit<Bank, 'id'> | undefined {
+  const sanitized = resolveBankName(bankName);
+  const ifscKey = ifsc.replace(/\s+/g, '').toUpperCase();
+  const branchVal = branch.trim() || stripBankNameDecorations(bankName) || 'Unknown';
+  if (!sanitized || !ifscKey || ifscKey.length > 11) return undefined;
+  return { name: sanitized, branch: branchVal, ifsc: ifscKey };
 }
 
 /** validate employee row before importing by checking if all the fields are valid */
@@ -738,7 +844,15 @@ function validateEmployeeRow(
     row['Bank Name'].trim() ||
     row['Bank Branch'].trim() ||
     row['Bank IFSC'].trim();
-  if (hasBankFields && !bankId) {
+  const pendingBank =
+    hasBankFields && !bankId
+      ? buildPendingBank(
+          row['Bank Name'],
+          row['Bank Branch'],
+          row['Bank IFSC'],
+        )
+      : undefined;
+  if (hasBankFields && !bankId && !pendingBank) {
     result.errors.push(
       `Bank "${row['Bank Name']}" / ${row['Bank Branch']} / ${row['Bank IFSC']} not found. Add bank in Master Data first.`,
     );
@@ -774,7 +888,7 @@ function validateEmployeeRow(
     workingStatus,
     appointmentDate: row['Appointment Date'] || undefined,
     resignDate: row['Resign Date'] || undefined,
-    bank: bankId,
+    bank: bankId ?? (pendingBank ? encodePendingBank(pendingBank) : undefined),
     accountNumber: row['Account Number'] || undefined,
     pfApplicable,
     pfNo: row['PF Number'] || undefined,
@@ -854,15 +968,12 @@ function parseEmployeeEmbeddedSheets(
     const wo = woNumber
       ? findWorkOrderByNumber(context.workOrders, woNumber)
       : undefined;
-    if (woNumber && !wo) {
-      rowErrors.push(`Work Order "${woNumber}" not found`);
-    }
     const attenParsed = parseRequiredNumber(
       row['Work Order Atten'] || '0',
       'Work Order Atten',
     );
     if (attenParsed.error) rowErrors.push(attenParsed.error);
-    if (rowErrors.length > 0 || !wo || attenParsed.value == null) {
+    if (rowErrors.length > 0 || !woNumber || attenParsed.value == null) {
       errors.push({
         rowIndex: sheetRow,
         errors: [`WorkOrderHr row ${sheetRow}: ${rowErrors.join('; ')}`],
@@ -871,7 +982,7 @@ function parseEmployeeEmbeddedSheets(
     }
     pushToMap(maps.workOrderHr, code, {
       period,
-      workOrderHr: wo.id,
+      workOrderHr: wo?.id ?? encodePendingWorkOrder(woNumber),
       workOrderAtten: attenParsed.value,
     });
   }
@@ -1046,7 +1157,7 @@ export function createEmployeeBulkConfig(): BulkUploadConfig<
       validateEmployeeRow(row, rowIndex, ctx),
     validateWorkbook: (workbook, ctx) =>
       validateEmployeeWorkbook(workbook, ctx),
-    async importRows(rows) {
+    async importRows(rows, context) {
       const errors: string[] = [];
       const existingCodes = new Set(
         (await employeeService.getAll()).map((e) => e.code.trim().toLowerCase()),
@@ -1091,7 +1202,70 @@ export function createEmployeeBulkConfig(): BulkUploadConfig<
         return { success: 0, failed: rows.length, errors };
       }
 
-      const result = await employeeService.createMany(prepared);
+      const bankByIfsc = new Map(
+        (await bankService.getAll()).map((b) => [
+          normalizeIfsc(b.ifsc),
+          b.id,
+        ]),
+      );
+      const workOrderByKey = new Map(
+        (context?.workOrders ?? []).map((wo) => [
+          workOrderMatchKey(wo.workOrderNumber),
+          wo.id,
+        ]),
+      );
+
+      const resolved: Omit<Employee, 'id'>[] = [];
+      for (const row of prepared) {
+        try {
+          let bank = row.bank;
+          const pendingBank = bank ? decodePendingBank(bank) : undefined;
+          if (pendingBank) {
+            const existing = bankByIfsc.get(pendingBank.ifsc);
+            if (existing) {
+              bank = existing;
+            } else {
+              const created = await bankService.create(pendingBank);
+              bankByIfsc.set(pendingBank.ifsc, created.id);
+              bank = created.id;
+            }
+          }
+
+          const workOrderHr: EmployeeWorkOrder[] = [];
+          for (const entry of row.workOrderHr ?? []) {
+            const pendingWo = decodePendingWorkOrder(entry.workOrderHr);
+            if (!pendingWo) {
+              workOrderHr.push(entry);
+              continue;
+            }
+            const key = workOrderMatchKey(pendingWo);
+            const existing = workOrderByKey.get(key);
+            if (existing) {
+              workOrderHr.push({ ...entry, workOrderHr: existing });
+              continue;
+            }
+            const created = await workOrderService.create({
+              workOrderNumber: pendingWo,
+            });
+            workOrderByKey.set(key, created.id);
+            workOrderHr.push({ ...entry, workOrderHr: created.id });
+          }
+
+          resolved.push({ ...row, bank, workOrderHr });
+        } catch (err) {
+          errors.push(
+            err instanceof Error
+              ? err.message
+              : `Failed to prepare employee "${row.code}"`,
+          );
+        }
+      }
+
+      if (resolved.length === 0) {
+        return { success: 0, failed: rows.length, errors };
+      }
+
+      const result = await employeeService.createMany(resolved);
       return {
         success: result.success,
         failed: rows.length - result.success,

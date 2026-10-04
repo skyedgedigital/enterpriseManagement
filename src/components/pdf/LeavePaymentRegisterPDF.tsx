@@ -1,3 +1,5 @@
+import { ReportTotalsRow } from "./ReportTotalsRow";
+import { signingWidths, SIGNING, leavePaymentColumns } from "@/lib/reportPolicy";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { LeavePaymentRegisterData, LeavePaymentRegisterRow } from "@/lib/buildLeavePaymentRegisterData";
 import { formatMoney2, formatMoneyWhole } from "@/lib/moneyRounding";
@@ -5,18 +7,18 @@ import { formatMoney2, formatMoneyWhole } from "@/lib/moneyRounding";
 const ROWS_PER_PAGE = 8;
 
 /** 19 physical columns: 01–07, 08–11 wages, 12 total, 13×3 deductions, 14 net, 15–16 sign, 17 remarks */
-const RAW_WIDTHS = [
+const RAW_WIDTHS = signingWidths([
   2.2, 8, 3.2, 5.2, 4.8, 2, 4.5, 3.8, 3.8, 3.5, 3.8, 4, 2.6, 2.6, 2.6, 4.2, 3, 3, 7.5,
-];
+], 828.89, [16], [17]);
 const W_SUM = RAW_WIDTHS.reduce((a, b) => a + b, 0);
 
 function w(i: number): `${string}%` {
-  return `${((RAW_WIDTHS[i]! / W_SUM) * 100).toFixed(2)}%` as `${string}%`;
+  return `${(RAW_WIDTHS[i]! / W_SUM) * 100}%` as `${string}%`;
 }
 
 function wRange(start: number, count: number): `${string}%` {
   const sum = RAW_WIDTHS.slice(start, start + count).reduce((a, b) => a + b, 0);
-  return `${((sum / W_SUM) * 100).toFixed(2)}%` as `${string}%`;
+  return `${(sum / W_SUM) * 100}%` as `${string}%`;
 }
 
 function chunkRows<T>(items: T[], size: number): T[][] {
@@ -107,6 +109,7 @@ const s = StyleSheet.create({
     alignItems: "stretch",
   },
   row: {
+    minHeight: SIGNING.rowHeight,
     flexDirection: "row",
     borderBottomWidth: 0.25,
     borderColor: "#000",
@@ -170,7 +173,7 @@ function LeaveStack({ row, width }: { row: LeavePaymentRegisterRow; width: `${st
   return (
     <View style={[s.cell, { width }, s.cellCenter, { paddingVertical: 3 }]}>
       <Text style={{ fontSize: 4.2, lineHeight: 1.2, textAlign: "center" }}>
-        {`Cl  ${formatMoneyWhole(row.daysCl)}\nEl  ${formatMoneyWhole(row.daysEl)}\nFl  ${formatMoneyWhole(row.daysFl)}\n———\n${formatMoneyWhole(row.daysLeaveTotal)}`}
+        {`Cl  ${formatMoney2(row.daysCl)}\nEl  ${formatMoney2(row.daysEl)}\nFl  ${formatMoney2(row.daysFl)}\n———\n${formatMoney2(row.daysLeaveTotal)}`}
       </Text>
     </View>
   );
@@ -302,6 +305,7 @@ export function LeavePaymentRegisterPDF({ data }: Props) {
                   {Array.from({ length: 7 }, (_, i) => (
                     <Text key={i} style={[s.thCell, { width: w(i) }, s.cellCenter]} />
                   ))}
+
                   <Text style={[s.thCell, { width: w(7) }, s.cellCenter]}>Basic Wages</Text>
                   <Text style={[s.thCell, { width: w(8) }, s.cellCenter]}>DA</Text>
                   <Text style={[s.thCell, { width: w(9) }, s.cellCenter]}>Over Time</Text>
@@ -317,7 +321,7 @@ export function LeavePaymentRegisterPDF({ data }: Props) {
                 </View>
 
                 {pageRows.map((row, idx) => (
-                  <View key={`${row.employeeId}-${startSl + idx}`} style={s.row}>
+                  <View key={`${row.employeeId}-${startSl + idx}`} style={s.row} wrap={false}>
                     <Text style={[s.cell, { width: w(0) }, s.cellCenter]}>{startSl + idx + 1}</Text>
                     <Text style={[s.cell, { width: w(1) }]}>{row.employeeName}</Text>
                     <Text style={[s.cell, { width: w(2) }, s.cellCenter]}>{row.workmanNo}</Text>
@@ -329,13 +333,13 @@ export function LeavePaymentRegisterPDF({ data }: Props) {
                     <Text style={[s.cell, { width: w(8) }, s.cellRight]}>{formatMoney2(row.sumDa)}</Text>
                     <Text style={[s.cell, { width: w(9) }, s.cellRight]}>{formatMoney2(row.sumOvertime)}</Text>
                     <Text style={[s.cell, { width: w(10) }, s.cellRight]}>
-                      {formatMoneyWhole(row.sumOtherCashPayment)}
+                      {formatMoney2(row.sumOtherCashPayment)}
                     </Text>
                     <Text style={[s.cell, { width: w(11) }, s.cellRight]}>{formatMoney2(row.sumTotalWages)}</Text>
                     <Text style={[s.cell, { width: w(12) }, s.cellRight]}>{formatMoneyWhole(row.sumPf)}</Text>
                     <Text style={[s.cell, { width: w(13) }, s.cellRight]}>{formatMoneyWhole(row.sumEsi)}</Text>
                     <Text style={[s.cell, { width: w(14) }, s.cellRight]}>
-                      {formatMoneyWhole(row.sumOthersDeduction)}
+                      {formatMoney2(row.sumOthersDeduction)}
                     </Text>
                     <Text style={[s.cell, { width: w(15) }, s.cellRight]}>{formatMoneyWhole(row.sumNetPaid)}</Text>
                     <Text style={[s.cell, { width: w(16) }]} />
@@ -345,6 +349,7 @@ export function LeavePaymentRegisterPDF({ data }: Props) {
                     </Text>
                   </View>
                 ))}
+                {isLast && <ReportTotalsRow rows={data.rows} columns={leavePaymentColumns} widths={RAW_WIDTHS.map((_,i)=>w(i))} />}
               </View>
             </View>
 

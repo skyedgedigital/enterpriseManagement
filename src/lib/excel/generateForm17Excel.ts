@@ -1,3 +1,6 @@
+import { wageRegisterColumns } from "@/lib/reportPolicy";
+import { formatBasicDaCalculation } from "@/lib/moneyRounding";
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { Form17Data } from "@/lib/generateForm17";
 import {
@@ -120,7 +123,7 @@ export async function generateForm17Excel(data: Form17Data): Promise<void> {
       row.designation || "-",
       row.daysWorked,
       "-",
-      `${Math.round(row.basicRate)}+${Math.round(row.daRate)}`,
+      formatBasicDaCalculation(row.basicRate, row.daRate),
       row.basicAmount,
       row.daAmount,
       0,
@@ -138,7 +141,7 @@ export async function generateForm17Excel(data: Form17Data): Promise<void> {
 
   /* ── Column widths ── */
   const widths = [
-    6, 22, 12, 16, 8, 8, 12,
+    6, 22, 12, 16, 8, 8, 28,
     10, 12, 8, 14, 10,
     8, 8, 8,
     12, 16, 14, 14,
@@ -162,6 +165,8 @@ export async function generateForm17Excel(data: Form17Data): Promise<void> {
       };
     });
   }
+
+  finishReportTable(sheet, 7, 6 + data.rows.length, wageRegisterColumns.map((column, index) => ({ column: index + 1, kind: column.kind })), 7 + data.rows.length, 2);
 
   await downloadExcel(workbook, reportFileName("FormXVII", data.month, data.year));
 }

@@ -1,3 +1,4 @@
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { LeaveRegisterChecklistData } from "@/lib/buildLeaveRegisterChecklistData";
 import {
@@ -229,5 +230,6 @@ export async function generateLeaveChecklistExcel(
 
   sheet.getColumn(lastCol).width = 36;
 
+  finishReportTable(sheet, subHeaderRow + 1, subHeaderRow + data.rows.length, Array.from({ length: monthCount + 5 }, (_, i) => ({ column: fixedCols + 1 + i, kind: 'days' as const })), subHeaderRow + data.rows.length + 1);
   await downloadExcel(workbook, fileName(filePrefix, data.calendarYear));
 }

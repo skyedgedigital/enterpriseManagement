@@ -1,5 +1,5 @@
 import { computePayment } from "./paymentCalculation";
-import { roundNearestInteger } from "./moneyRounding";
+import { roundNearestInteger, roundHalfUp2 } from "./moneyRounding";
 import {
   buildArrearAccumulator,
   type GenerateArrearParams,
@@ -61,10 +61,10 @@ export function buildArrearPFReport(
     rows.push({
       uan: employee.uan?.trim() ?? "",
       employeeName: employee.name?.trim() || employee.code || "",
-      epfWagesGross: roundNearestInteger(gross),
-      epfWages: roundNearestInteger(epfWages),
-      epsWages: roundNearestInteger(epsEdliWages),
-      edliWages: roundNearestInteger(epsEdliWages),
+      epfWagesGross: roundHalfUp2(gross),
+      epfWages: roundHalfUp2(epfWages),
+      epsWages: roundHalfUp2(epsEdliWages),
+      edliWages: roundHalfUp2(epsEdliWages),
       pf: breakdown.pf,
       epfAmount: roundNearestInteger(epsEdliWages * 0.0833),
       ppfAmount: roundNearestInteger(epfWages * 0.0367),

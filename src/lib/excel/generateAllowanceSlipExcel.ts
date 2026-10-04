@@ -1,3 +1,5 @@
+import { allowanceColumns } from "@/lib/reportPolicy";
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { AllowanceSlipData } from "@/lib/generateAllowanceSlip";
 import {
@@ -88,6 +90,8 @@ export async function generateAllowanceSlipExcel(data: AllowanceSlipData): Promi
       }
     }
   }
+
+  finishReportTable(sheet, 5, 4 + data.rows.length, allowanceColumns.map((column, index) => ({ column: index + 1, kind: column.kind })), 5 + data.rows.length, 2);
 
   await downloadExcel(workbook, reportFileName("AllowanceSlip", data.month, data.year));
 }

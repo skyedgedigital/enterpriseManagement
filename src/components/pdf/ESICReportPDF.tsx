@@ -1,3 +1,6 @@
+import { formatMoney2 } from "@/lib/moneyRounding";
+import { ReportTotalsRow } from "./ReportTotalsRow";
+import { esiReportColumns } from "@/lib/reportPolicy";
 import { Document, Page, View, Text } from "@react-pdf/renderer";
 import { pdfStyles as s } from "./pdfStyles";
 import { formatMonthYear } from "@/lib/pdfUtils";
@@ -71,10 +74,11 @@ export function ESICReportPDF({ rows, year, month, stateName }: ESICReportPDFPro
                   <Text>{row.daysPaid}</Text>
                 </View>
                 <View style={[s.tableCell, { width: COL_WIDTHS.wage }, s.textRight]}>
-                  <Text>{Math.round(row.totalMonthlyWage)}</Text>
+                  <Text>{formatMoney2(row.totalMonthlyWage)}</Text>
                 </View>
               </View>
             ))}
+            <ReportTotalsRow rows={rows} columns={esiReportColumns} widths={Object.values(COL_WIDTHS)} labelColumn={2} />
           </View>
         </View>
       </Page>
