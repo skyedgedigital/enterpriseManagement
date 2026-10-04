@@ -1,3 +1,4 @@
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { BonusChecklistData } from "@/lib/buildBonusChecklistData";
 import {
@@ -14,13 +15,6 @@ import {
 function fmtDays(n: number): string {
   if (n === 0) return "0";
   return Number.isInteger(n) ? String(n) : String(n);
-}
-
-function fmtAmountGrouped(n: number): string {
-  return n.toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 }
 
 function bonusExcelFileName(prefix: string, fyEndYear: number): string {
@@ -221,7 +215,8 @@ export async function generateBonusChecklistExcel(
       for (const p of group) {
         sumR.getCell(sc).value = p.label;
         sumR.getCell(sc).font = { size: 10 };
-        sumR.getCell(sc + 1).value = fmtAmountGrouped(p.amount);
+        sumR.getCell(sc + 1).value = p.amount;
+        sumR.getCell(sc + 1).numFmt = '#,##0.00';
         sumR.getCell(sc + 1).font = { size: 10, bold: true };
         sumR.getCell(sc + 1).alignment = { horizontal: "right", vertical: "middle" };
         sc += 2;
@@ -232,12 +227,14 @@ export async function generateBonusChecklistExcel(
     const grandR = sheet.getRow(sr);
     grandR.getCell(1).value = "Arrear";
     grandR.getCell(1).font = { size: 10, bold: true };
-    grandR.getCell(2).value = fmtAmountGrouped(foot.sumArrear);
+    grandR.getCell(2).value = foot.sumArrear;
+    grandR.getCell(2).numFmt = '#,##0.00';
     grandR.getCell(2).font = { size: 10, bold: true };
     grandR.getCell(2).alignment = { horizontal: "right", vertical: "middle" };
     grandR.getCell(3).value = "Total";
     grandR.getCell(3).font = { size: 10, bold: true };
-    grandR.getCell(4).value = fmtAmountGrouped(foot.sumPaidExcludingArrear);
+    grandR.getCell(4).value = foot.sumPaidExcludingArrear;
+    grandR.getCell(4).numFmt = '#,##0.00';
     grandR.getCell(4).font = { size: 10, bold: true };
     grandR.getCell(4).alignment = { horizontal: "right", vertical: "middle" };
 
@@ -287,5 +284,9 @@ export async function generateBonusChecklistExcel(
   sheet.getColumn(lastCol - 1).width = 9;
   sheet.getColumn(lastCol).width = 10;
 
+  finishReportTable(sheet, subHeaderRow + 1, totalsRow - 1, [
+    ...Array.from({ length: monthCount }, (_, i) => [{ column: FIXED_COLS + 1 + i * 2, kind: 'days' as const }, { column: FIXED_COLS + 2 + i * 2, kind: 'money' as const }]).flat(),
+    { column: FIXED_COLS + monthCount * 2 + 1, kind: 'money' }, { column: FIXED_COLS + monthCount * 2 + 2, kind: 'money' }, { column: FIXED_COLS + monthCount * 2 + 3, kind: 'rate' }, { column: FIXED_COLS + monthCount * 2 + 4, kind: 'days' },
+  ], totalsRow, 3);
   await downloadExcel(workbook, bonusExcelFileName(filePrefix, data.fyEndYear));
 }

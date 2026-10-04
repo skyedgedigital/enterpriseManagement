@@ -1,3 +1,4 @@
+import { finishReportTable } from "@/lib/excelUtils";
 import { Workbook } from "exceljs";
 import type { BonusRegisterData } from "@/lib/buildBonusRegisterData";
 import { computeBonusRegisterFooterTotals } from "@/lib/buildBonusRegisterData";
@@ -173,6 +174,19 @@ export async function generateBonusRegisterExcel(
   sheet.getRow(1).height = 48;
   sheet.getRow(TABLE_HEADER_ROW1).height = 72;
   sheet.getRow(TABLE_HEADER_ROW2).height = 54;
+
+  finishReportTable(sheet, DATA_START_ROW, DATA_START_ROW + data.rows.length - 1, [
+    { column: 6, kind: "days" },
+    { column: 7, kind: "money" },
+    { column: 8, kind: "money" },
+    { column: 9, kind: "money" },
+    { column: 10, kind: "money" },
+    { column: 11, kind: "money" },
+    { column: 12, kind: "money" },
+    { column: 13, kind: "wholeMoney" },
+    { column: 14, kind: "wholeMoney" },
+    { column: 16, kind: "signature" },
+  ], DATA_START_ROW + data.rows.length, 2);
 
   await downloadExcel(workbook, bonusRegisterExcelFileName(filePrefix, data.fyEndYear));
 }

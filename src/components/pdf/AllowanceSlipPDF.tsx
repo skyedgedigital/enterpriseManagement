@@ -1,5 +1,7 @@
+import { ReportTotalsRow } from "./ReportTotalsRow";
+import { allowanceColumns } from "@/lib/reportPolicy";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
-import { formatMoney2, formatMoneyWhole } from "@/lib/moneyRounding";
+import { formatMoney2 } from "@/lib/moneyRounding";
 import { formatMonthYear } from "@/lib/pdfUtils";
 
 export interface AllowanceSlipRow {
@@ -191,7 +193,7 @@ export function AllowanceSlipPDF({ data }: Props) {
                 <Text style={[s.cell, s.right, { width: COL.hra }]}>{formatMoney2(r.hra)}</Text>
                 <Text style={[s.cell, s.right, { width: COL.monthlyMobileAllowance }]}>{formatMoney2(r.monthlyMobileAllowance)}</Text>
                 <Text style={[s.cell, s.right, { width: COL.monthlyIncumbentAllowance }]}>{formatMoney2(r.monthlyIncumbentAllowance)}</Text>
-                <Text style={[s.cell, s.right, { width: COL.earnedOtherCash }]}>{formatMoneyWhole(r.earnedOtherCash)}</Text>
+                <Text style={[s.cell, s.right, { width: COL.earnedOtherCash }]}>{formatMoney2(r.earnedOtherCash)}</Text>
                 <Text style={[s.cell, s.right, { width: COL.performanceBonus }]}>{formatMoney2(r.performanceBonus)}</Text>
                 <Text style={[s.cell, s.right, { width: COL.washingAllowance }]}>{formatMoney2(r.washingAllowance)}</Text>
                 <Text style={[s.cell, s.right, { width: COL.conveyanceAllowance }]}>{formatMoney2(r.conveyanceAllowance)}</Text>
@@ -201,6 +203,7 @@ export function AllowanceSlipPDF({ data }: Props) {
                 <Text style={[s.cell, s.right, { width: COL.grandTotal }]}>{formatMoney2(r.grandTotal)}</Text>
               </View>
             ))}
+            <ReportTotalsRow rows={data.rows} columns={allowanceColumns} widths={Object.values(COL)} labelColumn={1} />
           </View>
         </View>
       </Page>

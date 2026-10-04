@@ -86,6 +86,7 @@ export const BANK_NAMES = [
   'Central Bank of India',
   'City Union Bank',
   'Federal Bank',
+  'Fino Payments Bank',
   'HDFC Bank',
   'ICICI Bank',
   'IDBI Bank',

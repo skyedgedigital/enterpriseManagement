@@ -1,7 +1,7 @@
 import { parse, isValid } from "date-fns";
 import type { BonusChecklistData } from "@/lib/buildBonusChecklistData";
 import type { Designation, Employee } from "@/types";
-import { ceilToWholeRupee, roundHalfUp2 } from "@/lib/moneyRounding";
+import { roundNearestInteger, roundHalfUp2 } from "@/lib/moneyRounding";
 
 /**
  * Form C bonus register rows. Built from bonus checklist FY aggregates only —
@@ -89,13 +89,13 @@ export function computeBonusRegisterFooterTotals(rows: BonusRegisterRow[]): Bonu
   let sumNetPayable = 0;
   for (const r of rows) {
     sumDaysWorkedYear += r.daysWorkedYear;
-    sumTotalSalaryOrWages += r.totalSalaryOrWages;
-    sumBonusPayable += r.amountOfBonusPayable;
-    sumDeductionPujaOrCustomary += r.deductionPujaOrCustomary;
-    sumDeductionInterimBonus += r.deductionInterimBonus;
-    sumDeductionFinancialLoss += r.deductionFinancialLoss;
-    sumTotalDeducted += r.totalSumDeducted;
-    sumNetPayable += r.netPayableAmount;
+    sumTotalSalaryOrWages += roundHalfUp2(r.totalSalaryOrWages);
+    sumBonusPayable += roundHalfUp2(r.amountOfBonusPayable);
+    sumDeductionPujaOrCustomary += roundHalfUp2(r.deductionPujaOrCustomary);
+    sumDeductionInterimBonus += roundHalfUp2(r.deductionInterimBonus);
+    sumDeductionFinancialLoss += roundHalfUp2(r.deductionFinancialLoss);
+    sumTotalDeducted += roundHalfUp2(r.totalSumDeducted);
+    sumNetPayable += roundNearestInteger(r.netPayableAmount);
   }
   return {
     sumDaysWorkedYear,
@@ -143,12 +143,12 @@ export function buildBonusRegisterData({
     // Statutory eligibility gate: under 30 days worked in the FY ⇒ no bonus.
     const eligible = cr.daysWorkedYear >= BONUS_MIN_DAYS_WORKED;
     const bonusRaw = eligible ? (total * pct) / 100 : 0;
-    const bonus = eligible ? ceilToWholeRupee(bonusRaw) : 0;
+    const bonus = eligible ? roundHalfUp2(bonusRaw) : 0;
     const puja = 0;
     const interim = 0;
     const loss = 0;
     const totalDed = 0;
-    const net = eligible ? Math.max(0, ceilToWholeRupee(bonus - totalDed)) : 0;
+    const net = eligible ? Math.max(0, roundNearestInteger(bonus - totalDed)) : 0;
 
     rows.push({
       slNo: sl,

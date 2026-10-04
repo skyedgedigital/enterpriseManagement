@@ -6,14 +6,14 @@ import { toast } from 'sonner';
 
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector } from '@/hooks/useAppSelector';
-import { fetchInvoices } from '@/store/slices/fleet-manager/invoiceSlice';
+import { useDebouncedCollectionSearch } from '@/hooks/useDebouncedCollectionSearch';
 import type { FleetInvoice } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { DataTable, type Column } from '@/components/shared/DataTable';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { DataTable, type Column } from '@/components/shared/DataTable';
 import { fetchAdminDepartments } from '@/store/slices/admin/adminDepartmentSlice';
 
 function isFirestoreTimestamp(value: unknown): value is { toDate: () => Date } {
@@ -37,12 +37,18 @@ export function FleetInvoiceListPage() {
     (state) => state.adminDepartments,
   );
   const navigate = useNavigate();
-  const { invoices, loading, error } = useAppSelector(
-    (state) => state.invoices,
-  );
+  const { error } = useAppSelector((state) => state.invoices);
+  const {
+    query,
+    setQuery,
+    items,
+    allItems,
+    initialLoading,
+    searchLoading,
+    error: searchError,
+  } = useDebouncedCollectionSearch<FleetInvoice>('invoices');
 
   useEffect(() => {
-    void dispatch(fetchInvoices());
     void dispatch(fetchAdminDepartments());
   }, [dispatch]);
 
@@ -55,6 +61,12 @@ export function FleetInvoiceListPage() {
       toast.error(error);
     }
   }, [error]);
+
+  useEffect(() => {
+    if (searchError) {
+      toast.error(searchError);
+    }
+  }, [searchError]);
 
   const columns: Column<FleetInvoice>[] = [
     { key: 'invoiceNumber', header: 'Invoice No' },
@@ -91,15 +103,17 @@ export function FleetInvoiceListPage() {
     },
   ];
 
-  if (loading && invoices.length === 0) {
-    return <LoadingState />;
-  }
+  if (initialLoading && allItems.length === 0) return <LoadingState />;
 
   return (
     <div className='space-y-6'>
       <PageHeader
         title='Invoices'
-        description={`${invoices.length} invoice${invoices.length !== 1 ? 's' : ''}`}
+        description={
+          query.trim()
+            ? `${items.length} match${items.length !== 1 ? 'es' : ''}`
+            : `${allItems.length} invoice${allItems.length !== 1 ? 's' : ''} total`
+        }
         action={
           <Button onClick={() => navigate('/fleet-manager/chalans')}>
             <Plus className='h-4 w-4' />
@@ -108,36 +122,38 @@ export function FleetInvoiceListPage() {
         }
       />
 
-      {invoices.length === 0 ? (
+      {allItems.length === 0 ? (
         <EmptyState
-          title='No invoices yet'
-          description='Create invoices from approved chalans in the fleet manager section.'
+          title='No invoices'
+          description='Create your first invoice to get started.'
           action={
             <Button onClick={() => navigate('/fleet-manager/chalans')}>
               <Plus className='h-4 w-4' />
-              Create first invoice
+              Create invoice
             </Button>
           }
         />
       ) : (
-        <DataTable
-          data={invoices}
-          columns={columns}
-          searchKey='invoiceNumber'
-          searchPlaceholder='Search by invoice number...'
-          actions={(row) => (
-            <>
-              <Button
-                variant='ghost'
-                size='sm'
-                onClick={() => navigate(`/fleet-manager/invoices/${row.id}`)}
-              >
-                <ExternalLink className='mr-2 h-4 w-4' />
-                View
-              </Button>
-            </>
-          )}
-        />
+      <DataTable
+        data={items}
+        columns={columns}
+        searchPlaceholder='Search by invoice number...'
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchLoading={searchLoading}
+        actions={(row) => (
+          <>
+            <Button
+              variant='ghost'
+              size='sm'
+              onClick={() => navigate(`/fleet-manager/invoices/${row.id}`)}
+            >
+              <ExternalLink className='mr-2 h-4 w-4' />
+              View
+            </Button>
+          </>
+        )}
+      />
       )}
     </div>
   );

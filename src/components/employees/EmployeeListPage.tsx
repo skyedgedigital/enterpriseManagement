@@ -5,7 +5,8 @@ import { toast } from "sonner";
 
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
-import { fetchEmployees, deleteEmployee } from "@/store/slices/employeeSlice";
+import { useDebouncedCollectionSearch } from "@/hooks/useDebouncedCollectionSearch";
+import { deleteEmployee } from "@/store/slices/employeeSlice";
 import { fetchDepartments } from "@/store/slices/departmentSlice";
 import { fetchDesignations } from "@/store/slices/designationSlice";
 import { fetchSites } from "@/store/slices/siteSlice";
@@ -29,7 +30,17 @@ import { employeeExportConfig } from "@/lib/excel/bulkUpload/masterDataExportCon
 export function EmployeeListPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { items, loading } = useAppSelector((state) => state.employees);
+  const { loading } = useAppSelector((state) => state.employees);
+  const {
+    query,
+    setQuery,
+    items,
+    allItems,
+    initialLoading,
+    searchLoading,
+    removeResult,
+    reloadAll,
+  } = useDebouncedCollectionSearch<Employee>("employees");
   const departments = useAppSelector((state) => state.departments.items);
   const designations = useAppSelector((state) => state.designations.items);
   const sites = useAppSelector((state) => state.sites.items);
@@ -41,7 +52,6 @@ export function EmployeeListPage() {
   const employeeBulkConfig = useMemo(() => createEmployeeBulkConfig(), []);
 
   useEffect(() => {
-    dispatch(fetchEmployees());
     dispatch(fetchDepartments());
     dispatch(fetchDesignations());
     dispatch(fetchSites());
@@ -59,6 +69,7 @@ export function EmployeeListPage() {
     const result = await dispatch(deleteEmployee(deleteTarget.id));
     if (deleteEmployee.fulfilled.match(result)) {
       toast.success("Employee deleted");
+      removeResult(deleteTarget.id);
       setDeleteTarget(null);
     } else {
       toast.error(result.payload as string);
@@ -82,13 +93,17 @@ export function EmployeeListPage() {
     },
   ];
 
-  if (loading && items.length === 0) return <LoadingState />;
+  if (initialLoading && allItems.length === 0) return <LoadingState />;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Employees"
-        description={`${items.length} employee${items.length !== 1 ? "s" : ""} total`}
+        description={
+          query.trim()
+            ? `${items.length} match${items.length !== 1 ? "es" : ""}`
+            : `${allItems.length} employee${allItems.length !== 1 ? "s" : ""} total`
+        }
         action={
           <div className="flex gap-2">
             <ExportExcelButton
@@ -113,7 +128,7 @@ export function EmployeeListPage() {
                 esiLocations,
                 workOrders,
               }}
-              onSuccess={() => dispatch(fetchEmployees())}
+              onSuccess={() => { void reloadAll(); }}
             />
             <Button onClick={() => navigate("/employees/new")}>
               <Plus className="h-4 w-4" />
@@ -123,7 +138,7 @@ export function EmployeeListPage() {
         }
       />
 
-      {items.length === 0 ? (
+      {allItems.length === 0 ? (
         <EmptyState
           title="No employees"
           description="Add your first employee to get started."
@@ -138,34 +153,36 @@ export function EmployeeListPage() {
         <DataTable
           data={items}
           columns={columns}
-          searchKey="name"
-          searchPlaceholder="Search by name..."
-          actions={(emp) => (
-            <>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={(e) => { e.stopPropagation(); navigate(`/employees/${emp.id}`); }}
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={(e) => { e.stopPropagation(); navigate(`/employees/${emp.id}/edit`); }}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={(e) => { e.stopPropagation(); setDeleteTarget(emp); }}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </>
-          )}
-        />
+        searchPlaceholder="Search by name or code..."
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchLoading={searchLoading}
+        actions={(emp) => (
+          <>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={(e) => { e.stopPropagation(); navigate(`/employees/${emp.id}`); }}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={(e) => { e.stopPropagation(); navigate(`/employees/${emp.id}/edit`); }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={(e) => { e.stopPropagation(); setDeleteTarget(emp); }}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </>
+        )}
+      />
       )}
 
       <DeleteDialog

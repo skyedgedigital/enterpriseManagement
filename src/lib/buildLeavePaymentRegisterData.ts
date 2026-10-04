@@ -221,14 +221,14 @@ export function buildLeavePaymentRegisterData({
       sumBasicWages += slip.basicAmount;
       sumDa += slip.daAmount;
       sumOtherCashPayment +=
-        slip.raw.otherCash +
-        ((w.allowances ?? 0) + weeklyAllowanceAmount) +
+        slip.otherCash +
+        roundHalfUp2((w.allowances ?? 0) + weeklyAllowanceAmount) +
         (slip.incentiveAmount ?? 0);
       sumTotalWages += slip.grossWages;
-      sumPf += slip.raw.pf;
-      sumEsi += slip.raw.esi;
-      sumOthersDeduction += w.otherDeduction ?? 0;
-      sumNetPaid += slip.raw.netAmountPaid;
+      sumPf += slip.pf;
+      sumEsi += slip.esi;
+      sumOthersDeduction += roundHalfUp2(w.otherDeduction ?? 0);
+      sumNetPaid += slip.netAmountPaid;
 
       if (month >= latestMonth) {
         latestMonth = month;
@@ -252,11 +252,11 @@ export function buildLeavePaymentRegisterData({
       sumBasicWages: roundHalfUp2(sumBasicWages),
       sumDa: roundHalfUp2(sumDa),
       sumOvertime: 0,
-      sumOtherCashPayment: roundNearestInteger(sumOtherCashPayment),
+      sumOtherCashPayment: roundHalfUp2(sumOtherCashPayment),
       sumTotalWages: roundHalfUp2(sumTotalWages),
       sumPf: roundNearestInteger(sumPf),
       sumEsi: roundNearestInteger(sumEsi),
-      sumOthersDeduction: roundNearestInteger(sumOthersDeduction),
+      sumOthersDeduction: roundHalfUp2(sumOthersDeduction),
       sumNetPaid: roundNearestInteger(sumNetPaid),
       remarks: "",
     });

@@ -1,3 +1,4 @@
+import { formatMoney2 } from "@/lib/moneyRounding";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { FullAndFinalData } from "@/lib/buildFullAndFinalData";
 import { formatMoneyWhole } from "@/lib/moneyRounding";
@@ -185,7 +186,7 @@ interface Props {
 }
 
 function fmt2(n: number): string {
-  return (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+  return formatMoney2(n);
 }
 
 function fmtInt(n: number): string {
@@ -240,8 +241,8 @@ export function FullAndFinalPDF({ data }: Props) {
           header="Year/Month"
           rows={data.years.map((y) => ({
             label: y.label,
-            values: y.months.map((m) => fmtInt(m.daysWorked)),
-            total: fmtInt(y.totalDays),
+            values: y.months.map((m) => String(m.daysWorked)),
+            total: String(y.totalDays),
           }))}
         />
 
@@ -249,9 +250,10 @@ export function FullAndFinalPDF({ data }: Props) {
         <Text style={s.sectionHeading}>Gross Wages (Basic+VDA)</Text>
         <MonthTable
           header="Year/Month"
+          monetary
           rows={data.years.map((y) => ({
             label: y.label,
-            values: y.months.map((m) => (m.gross === 0 ? "0" : fmt2(m.gross))),
+            values: y.months.map((m) => fmt2(m.gross)),
             total: fmt2(y.totalGross),
           }))}
         />
@@ -274,7 +276,7 @@ export function FullAndFinalPDF({ data }: Props) {
                   </View>
                 </View>
               ))}
-              <View style={s.compRowLast}>
+              <View style={s.compRowLast} wrap={false}>
                 <View style={[s.compCell, s.compCellBold, { width: "70%" }]}>
                   <Text>Total Deductions</Text>
                 </View>
@@ -296,7 +298,7 @@ export function FullAndFinalPDF({ data }: Props) {
         {/* =================== Workman Declaration =================== */}
         <Text style={s.underlineHeading}>Workman Declaration:</Text>
         <Text style={s.paraBold}>
-          Received a sum of Rs. {fmt2(data.netPayable)} (post deduction of Rs.{" "}
+          Received a sum of Rs. {formatMoneyWhole(data.netPayable)} (post deduction of Rs.{" "}
           {fmt2(data.totalDeductions)}) on {todayDdMmYyyy()} as Full and Final
           Settlement for my service with M/s {data.contractorName.toUpperCase()}{" "}
           for the working period {data.servicePeriodFrom}-
@@ -374,10 +376,13 @@ interface MonthTableRow {
 function MonthTable({
   header,
   rows,
+  monetary = false,
 }: {
   header: string;
   rows: MonthTableRow[];
+  monetary?: boolean;
 }) {
+  const sumText = (values: string[]) => monetary ? formatMoney2(values.reduce((sum, value) => sum + Number(value), 0)) : String(values.reduce((sum, value) => sum + Number(value), 0));
   // columns: Year/Month | 12 months | Total
   const labelCol = 14;
   const totalCol = 10;
@@ -442,6 +447,11 @@ function MonthTable({
           );
         })
       )}
+      <View style={s.tblRowLast} wrap={false}>
+        <Text style={[s.tblCell, s.tblBold, { width: `${labelCol}%` }]}>Total</Text>
+        {MONTH_SHORT.map((m, i) => <Text key={m} style={[s.tblCell, s.tblRight, { width: `${monthCol}%` }]}>{sumText(rows.map(row => row.values[i] ?? "0"))}</Text>)}
+        <Text style={[s.tblCellLast, s.tblBold, s.tblRight, { width: `${totalCol}%` }]}>{sumText(rows.map(row => row.total))}</Text>
+      </View>
     </View>
   );
 }
@@ -458,7 +468,7 @@ function ComponentTable({ data }: { data: FullAndFinalData }) {
     {
       name: "Unpaid Wages",
       definition: "Wage calculation for working days for current month",
-      eligibility: `Days Worked in Current Month: ${fmtInt(data.unpaidWagesDays)}`,
+      eligibility: `Days Worked in Current Month: ${String(data.unpaidWagesDays)}`,
       amount: `Rs. ${fmt2(data.unpaidWages)}`,
     },
     {
@@ -466,10 +476,10 @@ function ComponentTable({ data }: { data: FullAndFinalData }) {
       definition:
         "Earned leave calculated in current calendar year after deducting availed earned leave in the calendar year. Earned leave is 1 for every 20 days worked in a calendar year",
       eligibility:
-        `Days worked in Calendar Year: ${fmtInt(data.grandTotalDays)}\n` +
+        `Days worked in Calendar Year: ${String(data.grandTotalDays)}\n` +
         `No. of earned leave eligible: ${fmtInt(data.elTotal)}\n` +
-        `No. of EL availed: ${fmtInt(data.leaveAvailedDays)}\n` +
-        `Balance EL: ${fmtInt(data.balanceLeaveDays)}`,
+        `No. of EL availed: ${String(data.leaveAvailedDays)}\n` +
+        `Balance EL: ${String(data.balanceLeaveDays)}`,
       amount: `Rs. ${fmt2(data.leaveAmountMonetary)}`,
     },
     {
@@ -477,7 +487,7 @@ function ComponentTable({ data }: { data: FullAndFinalData }) {
       definition:
         "Bonus eligibility of current financial year is to be auto-calculated as 8.33% of total Basic+VDA of current FY in case employee has worked minimum 30 days in a FY; else system to calculate bonus eligibility as nil. In case of employee having gross wages more than Rs.21,000 p.m. bonus is not applicable.",
       eligibility:
-        `No of days worked in FY: ${fmtInt(data.currentFYDaysWorked)}\n` +
+        `No of days worked in FY: ${String(data.currentFYDaysWorked)}\n` +
         `8.33% of gross wages payable`,
       amount: `Rs. ${fmt2(data.bonusAmount)}`,
     },
@@ -486,7 +496,7 @@ function ComponentTable({ data }: { data: FullAndFinalData }) {
       definition:
         "Bonus eligibility of previous financial year is to be auto-calculated as 8.33% of total Basic+VDA of previous FY in case employee has worked minimum 30 days in a FY; else system to calculate bonus eligibility as nil. In case of employee having gross wages more than Rs.21,000 p.m. bonus is not applicable.",
       eligibility:
-        `No of days worked in FY: ${fmtInt(data.previousFYDaysWorked)}\n` +
+        `No of days worked in FY: ${String(data.previousFYDaysWorked)}\n` +
         `8.33% of gross wages payable`,
       amount: `Rs. ${fmt2(data.previousFYBonusAmount)}`,
     },
@@ -520,7 +530,7 @@ function ComponentTable({ data }: { data: FullAndFinalData }) {
         "Notice pay is payable in lieu of notice as defined in the Industrial Disputes Act. An employer is required to give at least one month's advance notice or payment in lieu thereof to a worker who has completed at least one year of continuous service before termination. It is to be nil in case mode of separation is 'Resignation by workman' else notice pay to be calculated as 26 days (in case total no. of working days is 240 from DOJ) else 3 days of (Basic+VDA) amount of last drawn wages.",
       eligibility:
         `Mode of Separation: ${data.modeOfSeparation || "N/A"}\n` +
-        `No of days worked: ${fmtInt(data.grandTotalDays)}`,
+        `No of days worked: ${String(data.grandTotalDays)}`,
       amount: `Rs. ${fmt2(data.noticePay)}`,
     },
   ];
@@ -598,7 +608,7 @@ function ComponentTable({ data }: { data: FullAndFinalData }) {
             { width: `${w.amt}%` },
           ]}
         >
-          <Text>Rs. {formatMoneyWhole(data.totalFullAndFinal)}</Text>
+          <Text>Rs. {formatMoney2(data.totalFullAndFinal)}</Text>
         </View>
       </View>
     </View>
