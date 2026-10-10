@@ -196,9 +196,12 @@ export const CONTRACTOR_ADDRESS = import.meta.env.VITE_CONTRACTOR_ADDRESS || '';
 export const CONTRACTOR_VENDOR_CODE =
   import.meta.env.VITE_CONTRACTOR_VENDOR_CODE || '';
 export const CONTRACTOR_EMAIL = import.meta.env.VITE_CONTRACTOR_EMAIL || '';
-export const CONTRACTOR_PHONE_NO = import.meta.env.VITE_CONTRACTOR_PHONE_NO || '';
+export const CONTRACTOR_PHONE_NO =
+  import.meta.env.VITE_CONTRACTOR_PHONE_NO || '';
 export const CONTRACTOR_PAN = import.meta.env.VITE_CONTRACTOR_PAN || '';
 export const CONTRACTOR_GSTIN = import.meta.env.VITE_CONTRACTOR_GSTIN || '';
+export const CONTRACTOR_INVOICE_STAMP_URL =
+  import.meta.env.VITE_INVOICE_STAMP_URL || '';
 
 /** Bonus register checklist PDF/Excel header (left column, lines 2–3). Edit to match your letterhead. */
 export const CONTRACTOR_BONUS_OFFICE_LINE = `Office Add.-${CONTRACTOR_ADDRESS}`;
