@@ -14,6 +14,7 @@ import {
   CONTRACTOR_GSTIN,
   CONTRACTOR_NAME,
   CONTRACTOR_PAN,
+  CONTRACTOR_PHONE_NO,
   CONTRACTOR_VENDOR_CODE,
 } from '../constants';
 
@@ -21,7 +22,7 @@ import {
 export const DUMMY_ENTERPRISE: EnterpriseInfo = {
   name: CONTRACTOR_NAME,
   address: CONTRACTOR_ADDRESS,
-  mobile: '',
+  mobile: CONTRACTOR_PHONE_NO,
   email: CONTRACTOR_EMAIL,
   gstin: CONTRACTOR_GSTIN,
   pan: CONTRACTOR_PAN,

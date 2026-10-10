@@ -192,10 +192,11 @@ export const EMPLOYEE_CODE_DIGITS = 4;
 /** Contractor details shown on all CLM PDF forms (FORM XIX, XVI, etc.) */
 export const CONTRACTOR_NAME =
   import.meta.env.VITE_CONTRACTOR_NAME || 'Enterprise Management';
-export const CONTRACTOR_ADDRESS = import.meta.env.VITE_COMPANY_ADDRESS || '';
+export const CONTRACTOR_ADDRESS = import.meta.env.VITE_CONTRACTOR_ADDRESS || '';
 export const CONTRACTOR_VENDOR_CODE =
   import.meta.env.VITE_CONTRACTOR_VENDOR_CODE || '';
 export const CONTRACTOR_EMAIL = import.meta.env.VITE_CONTRACTOR_EMAIL || '';
+export const CONTRACTOR_PHONE_NO = import.meta.env.VITE_CONTRACTOR_PHONE_NO || '';
 export const CONTRACTOR_PAN = import.meta.env.VITE_CONTRACTOR_PAN || '';
 export const CONTRACTOR_GSTIN = import.meta.env.VITE_CONTRACTOR_GSTIN || '';
 
