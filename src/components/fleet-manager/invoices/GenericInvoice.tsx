@@ -91,9 +91,7 @@ export const GenericInvoice = forwardRef<HTMLDivElement, Props>(
           </div>
           {/* Invoice meta */}
           <div className="flex flex-col gap-1 min-w-52">
-            <p>
-              Invoice no: SE/{getInvoiceYear()}/{invoiceNumber}
-            </p>
+            <p>Invoice no: {invoiceNumber}</p>
             <p>Date of Issue: {todayFormatted()}</p>
             <p>Vendor code: {enterprise.vendorCode}</p>
             <p>WO/PO No: {workOrder?.workOrderNumber ?? '—'}</p>
