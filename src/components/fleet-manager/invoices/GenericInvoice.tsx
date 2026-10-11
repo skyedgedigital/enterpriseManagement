@@ -7,7 +7,6 @@ import type {
 import {
   numberToWords,
   todayFormatted,
-  getInvoiceYear,
 } from '@/lib/fleet-manager/invoiceHelpers';
 import { CONTRACTOR_INVOICE_STAMP_URL } from '@/lib/constants';
 
