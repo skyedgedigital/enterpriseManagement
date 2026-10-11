@@ -4,6 +4,7 @@ import type {
   EnterpriseInfo,
   FleetWorkOrder,
 } from '@/types';
+import { CONTRACTOR_INVOICE_STAMP_URL } from '@/lib/constants';
 
 interface Props {
   id: string;
@@ -39,28 +40,28 @@ export const WMDInvoice = forwardRef<HTMLDivElement, Props>(
     <div
       id={id}
       ref={ref}
-      className='border-2 border-black p-2 text-[0.75rem] font-semibold tracking-wider w-full'
+      className="border-2 border-black p-2 text-[0.75rem] font-semibold tracking-wider w-full"
     >
       {/* WMD Header */}
-      <div className='flex justify-between mb-4'>
-        <div className='flex flex-col items-center flex-1'>
-          <h1 className='uppercase text-base'>Jusco LTD</h1>
-          <h2 className='uppercase'>Water Management</h2>
+      <div className="flex justify-between mb-4">
+        <div className="flex flex-col items-center flex-1">
+          <h1 className="uppercase text-base">Jusco LTD</h1>
+          <h2 className="uppercase">Water Management</h2>
           <p>JOB STATEMENT / PROFORMA INVOICE FORMAT</p>
-          <p className='text-xs'>
+          <p className="text-xs">
             (For making DO & Service Entry Sheet for service job)
           </p>
         </div>
-        <div className='text-right'>
+        <div className="text-right">
           <p>From No:- WMD/Bill/01</p>
           <p>Effective Dt: 16.12.2018</p>
         </div>
       </div>
 
       {/* Meta grid */}
-      <div className='flex gap-4 mb-4 overflow-x-auto'>
+      <div className="flex gap-4 mb-4 overflow-x-auto">
         {/* Left block */}
-        <table className='border border-black w-1/2'>
+        <table className="border border-black w-1/2">
           <tbody>
             {[
               ['Job Statement No:', invoiceNumber || 'N/A'],
@@ -72,16 +73,16 @@ export const WMDInvoice = forwardRef<HTMLDivElement, Props>(
               ['Billing Details:', 'As Below'],
             ].map(([label, value]) => (
               <tr key={label}>
-                <td className='border border-black p-1 font-bold whitespace-nowrap'>
+                <td className="border border-black p-1 font-bold whitespace-nowrap">
                   {label}
                 </td>
-                <td className='border border-black p-1 font-normal'>{value}</td>
+                <td className="border border-black p-1 font-normal">{value}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {/* Right block */}
-        <table className='border border-black w-1/2'>
+        <table className="border border-black w-1/2">
           <tbody>
             {[
               ['Date of Receipt in Bill section', '—'],
@@ -90,8 +91,8 @@ export const WMDInvoice = forwardRef<HTMLDivElement, Props>(
               ['Dt SESheet', '—'],
             ].map(([label, value]) => (
               <tr key={label}>
-                <td className='border border-black p-1 font-bold'>{label}</td>
-                <td className='border border-black p-1 font-normal'>{value}</td>
+                <td className="border border-black p-1 font-bold">{label}</td>
+                <td className="border border-black p-1 font-normal">{value}</td>
               </tr>
             ))}
           </tbody>
@@ -99,8 +100,8 @@ export const WMDInvoice = forwardRef<HTMLDivElement, Props>(
       </div>
 
       {/* Items table */}
-      <div className='overflow-x-auto'>
-        <table className='w-full border-collapse'>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
           <thead>
             <tr>
               {[
@@ -113,7 +114,7 @@ export const WMDInvoice = forwardRef<HTMLDivElement, Props>(
                 'Rate',
                 'Amount',
               ].map((h) => (
-                <th key={h} className='border border-black p-1'>
+                <th key={h} className="border border-black p-1">
                   {h}
                 </th>
               ))}
@@ -122,49 +123,49 @@ export const WMDInvoice = forwardRef<HTMLDivElement, Props>(
           <tbody>
             {items.map((item, i) => (
               <tr key={i}>
-                <td className='border border-black p-1'>{i + 1}</td>
-                <td className='border border-black p-1'>—</td>
-                <td className='border border-black p-1'>{item.hsnNo}</td>
-                <td className='border border-black p-1'>{item.itemName}</td>
-                <td className='border border-black p-1'>{item.unit}</td>
-                <td className='border border-black p-1'>
+                <td className="border border-black p-1">{i + 1}</td>
+                <td className="border border-black p-1">—</td>
+                <td className="border border-black p-1">{item.hsnNo}</td>
+                <td className="border border-black p-1">{item.itemName}</td>
+                <td className="border border-black p-1">{item.unit}</td>
+                <td className="border border-black p-1">
                   {item.hours.toFixed(2)}
                 </td>
-                <td className='border border-black p-1'>
+                <td className="border border-black p-1">
                   {item.itemPrice.toFixed(2)}
                 </td>
-                <td className='border border-black p-1'>
+                <td className="border border-black p-1">
                   {item.itemCost.toFixed(2)}
                 </td>
               </tr>
             ))}
             <tr>
               {[...Array(6)].map((_, i) => (
-                <td key={i} className='border border-black p-1'></td>
+                <td key={i} className="border border-black p-1"></td>
               ))}
-              <td className='border border-black p-1 font-bold'>Total</td>
-              <td className='border border-black p-1'>{total.toFixed(2)}</td>
+              <td className="border border-black p-1 font-bold">Total</td>
+              <td className="border border-black p-1">{total.toFixed(2)}</td>
             </tr>
             <tr>
               {[...Array(6)].map((_, i) => (
-                <td key={i} className='border border-black p-1'></td>
+                <td key={i} className="border border-black p-1"></td>
               ))}
-              <td className='border border-black p-1'>Add CGST @9%</td>
-              <td className='border border-black p-1'>{cgst.toFixed(2)}</td>
+              <td className="border border-black p-1">Add CGST @9%</td>
+              <td className="border border-black p-1">{cgst.toFixed(2)}</td>
             </tr>
             <tr>
               {[...Array(6)].map((_, i) => (
-                <td key={i} className='border border-black p-1'></td>
+                <td key={i} className="border border-black p-1"></td>
               ))}
-              <td className='border border-black p-1'>Add SGST @9%</td>
-              <td className='border border-black p-1'>{sgst.toFixed(2)}</td>
+              <td className="border border-black p-1">Add SGST @9%</td>
+              <td className="border border-black p-1">{sgst.toFixed(2)}</td>
             </tr>
             <tr>
               {[...Array(6)].map((_, i) => (
-                <td key={i} className='border border-black p-1'></td>
+                <td key={i} className="border border-black p-1"></td>
               ))}
-              <td className='border border-black p-1 font-bold'>Grand Total</td>
-              <td className='border border-black p-1 font-bold'>
+              <td className="border border-black p-1 font-bold">Grand Total</td>
+              <td className="border border-black p-1 font-bold">
                 {grandTotal.toFixed(2)} INR
               </td>
             </tr>
@@ -173,23 +174,23 @@ export const WMDInvoice = forwardRef<HTMLDivElement, Props>(
       </div>
 
       {/* Signature boxes */}
-      <div className='flex gap-4 mt-6 justify-between'>
+      <div className="flex gap-4 mt-6 justify-between">
         {[
           'JS Rcvd in Exe Sec',
           'Certified by Site Engg',
           'Certified by Mgr',
         ].map((label) => (
-          <div key={label} className='flex-1 border border-black'>
-            <div className='border-b border-black p-1'>Sign:</div>
-            <div className='border-b border-black p-1'>Name:</div>
-            <div className='border-b border-black p-1'>Date:</div>
-            <div className='p-1'>{label}</div>
+          <div key={label} className="flex-1 border border-black">
+            <div className="border-b border-black p-1">Sign:</div>
+            <div className="border-b border-black p-1">Name:</div>
+            <div className="border-b border-black p-1">Date:</div>
+            <div className="p-1">{label}</div>
           </div>
         ))}
       </div>
 
-      <div className='mt-4 p-2'>
-        <p className='font-bold'>Note</p>
+      <div className="mt-4 p-2">
+        <p className="font-bold">Note</p>
         <p>
           1. Attach / Put stamp for Vendor Evaluation with all Job Statement
         </p>
@@ -197,6 +198,12 @@ export const WMDInvoice = forwardRef<HTMLDivElement, Props>(
           2. Before certifying Job statement, pls check PO balance Value,
           Validity & IO Budget
         </p>
+        <img
+          src={CONTRACTOR_INVOICE_STAMP_URL || ''}
+          alt="Authorized Signature & Stamp"
+          crossOrigin="anonymous"
+          className="w-28 h-28 object-contain ml-auto  -mt-12"
+        />
       </div>
     </div>
   ),
