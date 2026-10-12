@@ -91,10 +91,15 @@ export function FleetInvoiceListPage() {
       render: (row) => `₹${Number(row.grandTotal ?? 0).toLocaleString()}`,
     },
     {
-      key: 'invoiceType',
-      header: 'Type',
-      render: (row) => row.invoiceType.toUpperCase(),
+      key: 'chalanNumbers',
+      header: 'Chalan',
+      render: (row) => `${row.chalanNumbers}`,
     },
+    // {
+    //   key: 'invoiceType',
+    //   header: 'Type',
+    //   render: (row) => row.invoiceType.toUpperCase(),
+    // },
     {
       key: 'createdAt',
       header: 'Created',
@@ -106,9 +111,9 @@ export function FleetInvoiceListPage() {
   if (initialLoading && allItems.length === 0) return <LoadingState />;
 
   return (
-    <div className='space-y-6'>
+    <div className="space-y-6">
       <PageHeader
-        title='Invoices'
+        title="Invoices"
         description={
           query.trim()
             ? `${items.length} match${items.length !== 1 ? 'es' : ''}`
@@ -116,7 +121,7 @@ export function FleetInvoiceListPage() {
         }
         action={
           <Button onClick={() => navigate('/fleet-manager/chalans')}>
-            <Plus className='h-4 w-4' />
+            <Plus className="h-4 w-4" />
             Create invoice
           </Button>
         }
@@ -124,36 +129,36 @@ export function FleetInvoiceListPage() {
 
       {allItems.length === 0 ? (
         <EmptyState
-          title='No invoices'
-          description='Create your first invoice to get started.'
+          title="No invoices"
+          description="Create your first invoice to get started."
           action={
             <Button onClick={() => navigate('/fleet-manager/chalans')}>
-              <Plus className='h-4 w-4' />
+              <Plus className="h-4 w-4" />
               Create invoice
             </Button>
           }
         />
       ) : (
-      <DataTable
-        data={items}
-        columns={columns}
-        searchPlaceholder='Search by invoice number...'
-        searchValue={query}
-        onSearchChange={setQuery}
-        searchLoading={searchLoading}
-        actions={(row) => (
-          <>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() => navigate(`/fleet-manager/invoices/${row.id}`)}
-            >
-              <ExternalLink className='mr-2 h-4 w-4' />
-              View
-            </Button>
-          </>
-        )}
-      />
+        <DataTable
+          data={items}
+          columns={columns}
+          searchPlaceholder="Search by invoice number..."
+          searchValue={query}
+          onSearchChange={setQuery}
+          searchLoading={searchLoading}
+          actions={(row) => (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(`/fleet-manager/invoices/${row.id}`)}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                View
+              </Button>
+            </>
+          )}
+        />
       )}
     </div>
   );
