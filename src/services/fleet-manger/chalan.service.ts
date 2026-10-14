@@ -52,6 +52,29 @@ export function calcPrice(
   return quantity * price;
 }
 
+/** Apply one unit to every line and recompute costing from the work-order item price. */
+export async function repriceChalanItems(
+  items: ChalanItem[],
+  unit: string,
+): Promise<{ items: ChalanItem[]; totalCost: number }> {
+  const next: ChalanItem[] = [];
+  let totalCost = 0;
+  for (const row of items) {
+    const fleetLine = await fleetWorkOrderService.getFleetWorkOrderItemById(
+      row.item,
+    );
+    if (!fleetLine) {
+      throw new Error(
+        `Price not found for item "${row.itemName || row.item}". Unit was not changed.`,
+      );
+    }
+    const itemCosting = calcPrice(row.hours, fleetLine.itemPrice, unit);
+    totalCost += itemCosting;
+    next.push({ ...row, unit, itemCosting });
+  }
+  return { items: next, totalCost };
+}
+
 // ============================================================
 // SERVICES
 // ============================================================

@@ -12,8 +12,11 @@ import {
   FileText,
 } from 'lucide-react';
 
+import { toast } from 'sonner';
+
 import type { Chalan, Engineer } from '@/types';
 import { cn } from '@/lib/utils';
+import { repriceChalanItems } from '@/services/fleet-manger/chalan.service';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,17 +54,24 @@ function formatInr(n: number): string {
 type FleetChalanCardProps = {
   chalan: Chalan;
   departmentName?: string;
+  departments?: { id: string; name: string }[];
+  workOrderUnits?: string[];
   workOrderLabel?: string;
   onDelete: () => void;
   onUpdate: (patch: {
     location?: string;
     engineerId?: string;
+    departmentId?: string;
+    items?: Chalan['items'];
+    totalCost?: number;
   }) => Promise<void>;
   onCreateInvoice: () => void;
 };
 export function FleetChalanCard({
   chalan,
   departmentName,
+  departments = [],
+  workOrderUnits = [],
   workOrderLabel,
   onDelete,
   onUpdate,
@@ -75,40 +85,110 @@ export function FleetChalanCard({
   const [editing, setEditing] = useState(false);
   const [location, setLocation] = useState(chalan.location ?? '');
   const [engineerId, setEngineerId] = useState(chalan.engineerId ?? '');
+  const [departmentId, setDepartmentId] = useState(chalan.departmentId ?? '');
+  const [unitChoice, setUnitChoice] = useState('');
+  const [engineerRequired, setEngineerRequired] = useState(false);
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [engLoading, setEngLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const handleEditOpen = async () => {
-    setEditing(true);
-    // Jab edit open ho to latest values ke sath state reset karein
-    setLocation(chalan.location ?? '');
-    setEngineerId(chalan.engineerId ?? '');
+  const canEditDeptAndUnit = !chalan.invoiceCreated;
+  const lineUnits = [...new Set(chalan.items.map((row) => row.unit).filter(Boolean))];
+  const unitOptions = [...new Set([...workOrderUnits, ...lineUnits])];
+
+  const loadEngineers = async (
+    deptId: string,
+    currentEngineer: string,
+    requireMatch: boolean,
+  ) => {
     setEngLoading(true);
     try {
-      const list = await engineerService.getEngineersByDepartment(
-        chalan.departmentId,
-      );
-      setEngineers(list ?? []);
-      console.log('list', list);
+      const list = await engineerService.getEngineersByDepartment(deptId);
+      const next = list ?? [];
+      setEngineers(next);
+      if (
+        requireMatch &&
+        currentEngineer &&
+        !next.some((e) => e.id === currentEngineer)
+      ) {
+        setEngineerId('');
+        setEngineerRequired(true);
+      } else {
+        setEngineerRequired(false);
+      }
     } catch {
       setEngineers([]);
+      setEngineerRequired(false);
     } finally {
       setEngLoading(false);
     }
+  };
+
+  const handleEditOpen = async () => {
+    setEditing(true);
+    setLocation(chalan.location ?? '');
+    setEngineerId(chalan.engineerId ?? '');
+    setDepartmentId(chalan.departmentId ?? '');
+    setUnitChoice(lineUnits.length === 1 ? lineUnits[0] : '');
+    setEngineerRequired(false);
+    await loadEngineers(
+      chalan.departmentId,
+      chalan.engineerId ?? '',
+      !chalan.invoiceCreated,
+    );
   };
 
   const handleCancel = () => {
     setEditing(false);
     setLocation(chalan.location ?? '');
     setEngineerId(chalan.engineerId ?? '');
+    setDepartmentId(chalan.departmentId ?? '');
+    setUnitChoice('');
+    setEngineerRequired(false);
+  };
+
+  const handleDepartmentChange = (nextId: string) => {
+    setDepartmentId(nextId);
+    void loadEngineers(nextId, engineerId, true);
   };
 
   const handleSave = async () => {
+    if (canEditDeptAndUnit && engineerRequired && !engineerId) {
+      toast.error('Select an engineer for this department');
+      return;
+    }
     setSaving(true);
     try {
-      await onUpdate({ location: location.trim(), engineerId });
+      const patch: {
+        location?: string;
+        engineerId?: string;
+        departmentId?: string;
+        items?: Chalan['items'];
+        totalCost?: number;
+      } = { location: location.trim(), engineerId };
+
+      if (
+        canEditDeptAndUnit &&
+        departmentId &&
+        departmentId !== chalan.departmentId
+      ) {
+        patch.departmentId = departmentId;
+      }
+
+      if (
+        canEditDeptAndUnit &&
+        unitChoice &&
+        chalan.items.some((row) => row.unit !== unitChoice)
+      ) {
+        const repriced = await repriceChalanItems(chalan.items, unitChoice);
+        patch.items = repriced.items;
+        patch.totalCost = repriced.totalCost;
+      }
+
+      await onUpdate(patch);
       setEditing(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update chalan');
     } finally {
       setSaving(false);
     }
@@ -212,6 +292,52 @@ export function FleetChalanCard({
               </div>
 
               <div className='space-y-2'>
+                <Label>Department</Label>
+                <Select
+                  value={departmentId || undefined}
+                  onValueChange={handleDepartmentChange}
+                  disabled={!canEditDeptAndUnit || departments.length === 0}
+                >
+                  <SelectTrigger className='bg-background shadow-sm'>
+                    <SelectValue placeholder='Select department' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className='space-y-2'>
+                <Label>Unit for all items</Label>
+                <Select
+                  value={unitChoice || undefined}
+                  onValueChange={setUnitChoice}
+                  disabled={!canEditDeptAndUnit || unitOptions.length === 0}
+                >
+                  <SelectTrigger className='bg-background shadow-sm'>
+                    <SelectValue
+                      placeholder={
+                        lineUnits.length > 1
+                          ? 'Mixed — pick one unit'
+                          : 'Select unit'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unitOptions.map((unit) => (
+                      <SelectItem key={unit} value={unit}>
+                        {unit}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className='space-y-2'>
                 <Label>Engineer</Label>
                 {engLoading ? (
                   <div className='flex h-10 items-center gap-2 rounded-md border border-input bg-muted/50 px-3 text-sm text-muted-foreground'>
@@ -220,7 +346,7 @@ export function FleetChalanCard({
                   </div>
                 ) : (
                   <Select
-                    value={engineerId}
+                    value={engineerId || undefined}
                     onValueChange={setEngineerId}
                     disabled={engineers.length === 0}
                   >
@@ -245,6 +371,19 @@ export function FleetChalanCard({
               </div>
             </div>
 
+            {!canEditDeptAndUnit && (
+              <p className='mt-4 text-sm text-muted-foreground'>
+                Department and unit can be changed only before an invoice is
+                created.
+              </p>
+            )}
+            {canEditDeptAndUnit && engineerRequired && !engineerId && (
+              <p className='mt-4 text-sm text-destructive'>
+                This department does not include the current engineer. Pick a
+                new engineer before saving.
+              </p>
+            )}
+
             {/* Buttons moved inside the form container */}
             <div className='mt-6 flex items-center justify-end gap-3'>
               <Button
@@ -261,7 +400,11 @@ export function FleetChalanCard({
                 type='button'
                 size='sm'
                 onClick={handleSave}
-                disabled={saving}
+                disabled={
+                  saving ||
+                  engLoading ||
+                  (canEditDeptAndUnit && engineerRequired && !engineerId)
+                }
                 className='bg-[#4A90E2] text-white hover:bg-[#4A90E2]/90'
               >
                 {saving ? (

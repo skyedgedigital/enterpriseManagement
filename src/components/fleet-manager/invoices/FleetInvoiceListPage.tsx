@@ -1,20 +1,26 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Plus, ExternalLink } from 'lucide-react';
+import { Plus, ExternalLink, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector } from '@/hooks/useAppSelector';
 import { useDebouncedCollectionSearch } from '@/hooks/useDebouncedCollectionSearch';
+import {
+  INVOICE_DELETE_DESCRIPTION,
+  invoiceMatchesQuery,
+} from '@/lib/fleet-manager/invoiceHelpers';
 import type { FleetInvoice } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { DeleteDialog } from '@/components/shared/DeleteDialog';
 import { DataTable, type Column } from '@/components/shared/DataTable';
 import { fetchAdminDepartments } from '@/store/slices/admin/adminDepartmentSlice';
+import { deleteInvoice } from '@/store/slices/fleet-manager/invoiceSlice';
 
 function isFirestoreTimestamp(value: unknown): value is { toDate: () => Date } {
   return (
@@ -39,14 +45,19 @@ export function FleetInvoiceListPage() {
   const navigate = useNavigate();
   const { error } = useAppSelector((state) => state.invoices);
   const {
-    query,
-    setQuery,
-    items,
     allItems,
     initialLoading,
-    searchLoading,
     error: searchError,
+    removeResult,
   } = useDebouncedCollectionSearch<FleetInvoice>('invoices');
+  const [query, setQuery] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<FleetInvoice | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const items = useMemo(
+    () => allItems.filter((invoice) => invoiceMatchesQuery(invoice, query)),
+    [allItems, query],
+  );
 
   useEffect(() => {
     void dispatch(fetchAdminDepartments());
@@ -67,6 +78,20 @@ export function FleetInvoiceListPage() {
       toast.error(searchError);
     }
   }, [searchError]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await dispatch(deleteInvoice(deleteTarget.id));
+    setDeleting(false);
+    if (deleteInvoice.fulfilled.match(result)) {
+      removeResult(deleteTarget.id);
+      toast.success('Invoice deleted');
+      setDeleteTarget(null);
+    } else {
+      toast.error((result.payload as string) || 'Failed to delete invoice');
+    }
+  };
 
   const columns: Column<FleetInvoice>[] = [
     { key: 'invoiceNumber', header: 'Invoice No' },
@@ -137,10 +162,9 @@ export function FleetInvoiceListPage() {
       <DataTable
         data={items}
         columns={columns}
-        searchPlaceholder='Search by invoice number...'
+        searchPlaceholder='Search by invoice, chalan, or work order number'
         searchValue={query}
         onSearchChange={setQuery}
-        searchLoading={searchLoading}
         actions={(row) => (
           <>
             <Button
@@ -151,10 +175,30 @@ export function FleetInvoiceListPage() {
               <ExternalLink className='mr-2 h-4 w-4' />
               View
             </Button>
+            <Button
+              variant='ghost'
+              size='sm'
+              className='text-destructive hover:text-destructive'
+              onClick={() => setDeleteTarget(row)}
+            >
+              <Trash2 className='mr-2 h-4 w-4' />
+              Delete
+            </Button>
           </>
         )}
       />
       )}
+
+      <DeleteDialog
+        open={!!deleteTarget}
+        onClose={() => {
+          if (!deleting) setDeleteTarget(null);
+        }}
+        onConfirm={handleDelete}
+        loading={deleting}
+        title={`Delete invoice ${deleteTarget?.invoiceNumber ?? ''}?`}
+        description={INVOICE_DELETE_DESCRIPTION}
+      />
     </div>
   );
 }

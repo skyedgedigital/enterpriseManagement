@@ -55,6 +55,20 @@ export const fetchLatestInvoiceSerial = createAsyncThunk(
     }
   },
 );
+export const deleteInvoice = createAsyncThunk(
+  'invoices/delete',
+  async (invoiceId: string, { rejectWithValue }) => {
+    try {
+      await invoiceService.delete(invoiceId);
+      return invoiceId;
+    } catch (e) {
+      return rejectWithValue(
+        e instanceof Error ? e.message : 'Failed to delete invoice',
+      );
+    }
+  },
+);
+
 export const updateInvoiceMeta = createAsyncThunk(
   'invoices/updateMeta',
   async (
@@ -136,6 +150,13 @@ const invoiceSlice = createSlice({
       })
       .addCase(updateInvoiceMeta.rejected, (s, a) => {
         s.loading = false;
+        s.error = a.payload as string;
+      })
+      .addCase(deleteInvoice.fulfilled, (s, a) => {
+        s.invoices = s.invoices.filter((i) => i.id !== a.payload);
+        if (s.selectedInvoice?.id === a.payload) s.selectedInvoice = null;
+      })
+      .addCase(deleteInvoice.rejected, (s, a) => {
         s.error = a.payload as string;
       });
   },

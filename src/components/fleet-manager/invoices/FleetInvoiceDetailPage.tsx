@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { invoiceService } from '@/services/fleet-manger/invoice.service';
+import { INVOICE_DELETE_DESCRIPTION } from '@/lib/fleet-manager/invoiceHelpers';
 import type { FleetInvoice } from '@/types';
 
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppSelector } from '@/hooks/useAppSelector';
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { fetchAdminDepartments } from '@/store/slices/admin/adminDepartmentSlice';
+import { deleteInvoice } from '@/store/slices/fleet-manager/invoiceSlice';
+import { DeleteDialog } from '@/components/shared/DeleteDialog';
 
 export function FleetInvoiceDetailPage() {
   const { items: departments } = useAppSelector(
@@ -24,6 +27,8 @@ export function FleetInvoiceDetailPage() {
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<FleetInvoice | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -48,6 +53,19 @@ export function FleetInvoiceDetailPage() {
     departments.map((d) => [d.id, d.name]),
   );
 
+  const handleDelete = async () => {
+    if (!invoice) return;
+    setDeleting(true);
+    const result = await dispatch(deleteInvoice(invoice.id));
+    setDeleting(false);
+    if (deleteInvoice.fulfilled.match(result)) {
+      toast.success('Invoice deleted');
+      navigate('/fleet-manager/invoices');
+    } else {
+      toast.error((result.payload as string) || 'Failed to delete invoice');
+    }
+  };
+
   if (loading) return <LoadingState />;
   if (!invoice)
     return (
@@ -62,13 +80,22 @@ export function FleetInvoiceDetailPage() {
         title={`Invoice ${invoice.invoiceNumber}`}
         description={`Saved invoice for ${invoice.departmentName}`}
         action={
-          <Button
-            variant='outline'
-            onClick={() => navigate('/fleet-manager/invoices')}
-          >
-            <ArrowLeft className='mr-2 h-4 w-4' />
-            Back to invoices
-          </Button>
+          <div className='flex flex-wrap gap-2'>
+            <Button
+              variant='destructive'
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className='mr-2 h-4 w-4' />
+              Delete
+            </Button>
+            <Button
+              variant='outline'
+              onClick={() => navigate('/fleet-manager/invoices')}
+            >
+              <ArrowLeft className='mr-2 h-4 w-4' />
+              Back to invoices
+            </Button>
+          </div>
         }
       />
 
@@ -202,6 +229,17 @@ export function FleetInvoiceDetailPage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <DeleteDialog
+        open={deleteOpen}
+        onClose={() => {
+          if (!deleting) setDeleteOpen(false);
+        }}
+        onConfirm={handleDelete}
+        loading={deleting}
+        title={`Delete invoice ${invoice.invoiceNumber}?`}
+        description={INVOICE_DELETE_DESCRIPTION}
+      />
     </div>
   );
 }

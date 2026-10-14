@@ -18,7 +18,7 @@ import { PaymentModal } from './PaymentModal';
 import { useClmData } from '@/hooks/useClmData';
 import { useClmEmployeeActions } from '@/hooks/useClmEmployeeActions';
 import { useClmReports } from '@/hooks/useClmReports';
-import { periodString } from '@/lib/clm/helpers';
+import { periodString, previousPeriod } from '@/lib/clm/helpers';
 import type { Employee } from '@/types';
 import InfoStripe from '../shared/InfoStripe';
 
@@ -134,6 +134,32 @@ export function CLMPage() {
       'Work order',
     [workOrders, workOrderId],
   );
+
+  const { preselectedIds, crewHint } = useMemo(() => {
+    if (!workOrderId) return { preselectedIds: [] as string[], crewHint: null };
+    const prev = previousPeriod(month, year);
+    const available = new Set(availableToAdd.map((e) => e.id));
+    const ids = employees
+      .filter((e) => available.has(e.id))
+      .filter((e) =>
+        (e.workOrderHr ?? []).some(
+          (wo) => wo.workOrderHr === workOrderId && wo.period === prev.period,
+        ),
+      )
+      .map((e) => e.id);
+    if (ids.length === 0) {
+      return { preselectedIds: ids, crewHint: null };
+    }
+    const prevLabel = new Date(prev.year, prev.month - 1, 1).toLocaleString(
+      'default',
+      { month: 'long', year: 'numeric' },
+    );
+    const people = ids.length === 1 ? 'person' : 'people';
+    return {
+      preselectedIds: ids,
+      crewHint: `${ids.length} ${people} from ${prevLabel} were pre-selected. Uncheck anyone who left and tick new people.`,
+    };
+  }, [workOrderId, month, year, availableToAdd, employees]);
 
   const newPfApplicable = useMemo(
     () =>
@@ -259,6 +285,8 @@ export function CLMPage() {
         availableEmployees={availableToAdd}
         periodLabel={periodLabel}
         workOrderLabel={workOrderLabel}
+        preselectedIds={preselectedIds}
+        crewHint={crewHint}
         onAdd={actions.addEmployees}
       />
 

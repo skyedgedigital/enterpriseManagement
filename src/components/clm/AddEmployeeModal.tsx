@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,10 @@ export interface AddEmployeeModalProps {
   availableEmployees: Employee[];
   periodLabel: string;
   workOrderLabel: string;
+  /** Employee ids from the previous month to check when the dialog opens. */
+  preselectedIds?: string[];
+  /** Shown when last month's crew was pre-selected. */
+  crewHint?: string | null;
   onAdd: (employeeIds: string[]) => Promise<void>;
 }
 
@@ -27,11 +31,20 @@ export function AddEmployeeModal({
   availableEmployees,
   periodLabel,
   workOrderLabel,
+  preselectedIds = [],
+  crewHint,
   onAdd,
 }: AddEmployeeModalProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const preselectedRef = useRef(preselectedIds);
+  preselectedRef.current = preselectedIds;
+
+  useEffect(() => {
+    if (!open) return;
+    setSelectedIds(new Set(preselectedRef.current));
+  }, [open]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return availableEmployees;
@@ -102,6 +115,11 @@ export function AddEmployeeModal({
           Assign employees to <strong>{workOrderLabel}</strong> for period{" "}
           <strong>{periodLabel}</strong>.
         </p>
+        {crewHint ? (
+          <p className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {crewHint}
+          </p>
+        ) : null}
 
         <div className="space-y-2">
           <Label>Search by name or code</Label>

@@ -18,6 +18,22 @@ export function periodString(month: number, year: number): string {
   return `${String(month).padStart(2, "0")}-${year}`;
 }
 
+/** Calendar month before `month`/`year`. January wraps to December of the previous year. */
+export function previousPeriod(month: number, year: number): {
+  month: number;
+  year: number;
+  period: string;
+} {
+  const date = new Date(year, month - 2, 1);
+  const prevMonth = date.getMonth() + 1;
+  const prevYear = date.getFullYear();
+  return {
+    month: prevMonth,
+    year: prevYear,
+    period: periodString(prevMonth, prevYear),
+  };
+}
+
 // --------------------------------------------------------------------------
 // runReport: unified try / catch / toast wrapper around a report builder.
 // --------------------------------------------------------------------------

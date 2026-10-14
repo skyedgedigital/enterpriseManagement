@@ -203,6 +203,10 @@ export function FleetChalanListPage() {
                   <FleetChalanCard
                     chalan={c}
                     departmentName={deptName(c.departmentId)}
+                    departments={departments}
+                    workOrderUnits={
+                      fleetWOs.find((w) => w.id === c.workOrderId)?.units ?? []
+                    }
                     workOrderLabel={woLabel(c.workOrderId)}
                     onDelete={() => setDeleteTarget(c)}
                     onUpdate={async (patch) => {

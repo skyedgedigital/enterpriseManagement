@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 import type {
   Chalan,
+  FleetInvoice,
   MergedInvoiceItem,
   InvoiceSummaryByItem,
   InvoiceType,
@@ -43,6 +44,23 @@ export function getInvoiceYear(): string {
 // ── Full invoice number ──
 export function buildInvoiceNumber(serial: string): string {
   return `SE/${getInvoiceYear()}/${serial.trim()}`;
+}
+
+export const INVOICE_DELETE_DESCRIPTION =
+  'This will remove the invoice and its PDFs, make the linked chalans available for a new invoice, and add the grand total back to the work order balance. This cannot be undone.';
+
+/** Case-insensitive match on invoice number, work order number, or any linked chalan number. */
+export function invoiceMatchesQuery(
+  invoice: Pick<FleetInvoice, 'invoiceNumber' | 'workOrderNumber' | 'chalanNumbers'>,
+  query: string,
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  if ((invoice.invoiceNumber ?? '').toLowerCase().includes(q)) return true;
+  if ((invoice.workOrderNumber ?? '').toLowerCase().includes(q)) return true;
+  return (invoice.chalanNumbers ?? []).some((n) =>
+    (n ?? '').toLowerCase().includes(q),
+  );
 }
 
 // ── Detect invoice type from department name ──

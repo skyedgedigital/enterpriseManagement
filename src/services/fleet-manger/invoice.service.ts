@@ -9,8 +9,10 @@ import {
   orderBy,
   serverTimestamp,
   where,
+  runTransaction,
+  type DocumentSnapshot,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/config/firebase';
 import { COLLECTIONS } from '@/lib/constants';
 import type { FleetInvoice, MergedInvoiceItem } from '@/types';
@@ -124,5 +126,69 @@ export const invoiceService = {
       ...patch,
       updatedAt: serverTimestamp(),
     });
+  },
+
+  /**
+   * Removes the invoice, restores the work order balance, and unlocks chalans.
+   * Firestore writes commit together so a retry cannot add the balance twice.
+   * PDF deletes run after that and a missing file is ignored.
+   */
+  async delete(id: string): Promise<void> {
+    const invRef = invoiceDoc(id);
+
+    await runTransaction(db, async (tx) => {
+      const invSnap = await tx.get(invRef);
+      if (!invSnap.exists()) throw new Error('Invoice not found');
+      const invoice = invSnap.data() as FleetInvoice;
+      if (!invoice.workOrderId) {
+        throw new Error('Invoice has no work order');
+      }
+
+      const woRef = doc(db, COLLECTIONS.FLEET_WORK_ORDERS, invoice.workOrderId);
+      const woSnap = await tx.get(woRef);
+      if (!woSnap.exists()) throw new Error('Work order not found');
+
+      const chalanIds = invoice.chalanIds ?? [];
+      const chalanRefs = chalanIds.map((chalanId) =>
+        doc(db, COLLECTIONS.CHALANS, chalanId),
+      );
+      const chalanSnaps: DocumentSnapshot[] = [];
+      for (const chalanRef of chalanRefs) {
+        chalanSnaps.push(await tx.get(chalanRef));
+      }
+
+      const balance = Number(woSnap.data().workOrderBalance ?? 0);
+      const grandTotal = Number(invoice.grandTotal ?? 0);
+      if (!Number.isFinite(balance) || !Number.isFinite(grandTotal)) {
+        throw new Error('Invoice grand total or work order balance is invalid');
+      }
+      tx.update(woRef, {
+        workOrderBalance: balance + grandTotal,
+        updatedAt: serverTimestamp(),
+      });
+
+      chalanSnaps.forEach((snap, index) => {
+        if (!snap.exists()) return;
+        tx.update(chalanRefs[index], {
+          invoiceCreated: false,
+          updatedAt: serverTimestamp(),
+        });
+      });
+
+      tx.delete(invRef);
+    });
+
+    await Promise.all(
+      [
+        `invoices/${id}/invoice-${id}.pdf`,
+        `invoices/${id}/summary-${id}.pdf`,
+      ].map(async (path) => {
+        try {
+          await deleteObject(ref(storage, path));
+        } catch (error) {
+          console.warn('Failed to delete invoice file:', path, error);
+        }
+      }),
+    );
   },
 };

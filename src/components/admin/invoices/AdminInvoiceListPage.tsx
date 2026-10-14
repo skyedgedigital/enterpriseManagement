@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ExternalLink } from 'lucide-react';
+import { Save, Loader2, ExternalLink, Trash2, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -15,8 +15,14 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { EmptyState } from '@/components/shared/EmptyState';
 import {
+  INVOICE_DELETE_DESCRIPTION,
+  invoiceMatchesQuery,
+} from '@/lib/fleet-manager/invoiceHelpers';
+import { DeleteDialog } from '@/components/shared/DeleteDialog';
+import {
   fetchInvoices,
   updateInvoiceMeta,
+  deleteInvoice,
 } from '@/store/slices/fleet-manager/invoiceSlice';
 
 // ----------------------------------------------------------------
@@ -42,7 +48,13 @@ function getFinancialYear(ts?: Timestamp): string {
 // ----------------------------------------------------------------
 // Inline edit row component
 // ----------------------------------------------------------------
-function InvoiceMetaRow({ invoice }: { invoice: FleetInvoice }) {
+function InvoiceMetaRow({
+  invoice,
+  onDelete,
+}: {
+  invoice: FleetInvoice;
+  onDelete: (invoice: FleetInvoice) => void;
+}) {
   const dispatch = useAppDispatch();
 
   const [sesNo, setSesNo] = useState(invoice.sesNo ?? '');
@@ -153,16 +165,26 @@ function InvoiceMetaRow({ invoice }: { invoice: FleetInvoice }) {
         />
       </td>
 
-      {/* Save button */}
+      {/* Save / delete */}
       <td className='px-4 py-3'>
-        <Button size='sm' disabled={!isDirty || saving} onClick={handleSave}>
-          {saving ? (
-            <Loader2 className='h-3.5 w-3.5 animate-spin' />
-          ) : (
-            <Save className='h-3.5 w-3.5' />
-          )}
-          {saving ? 'Saving...' : 'Save'}
-        </Button>
+        <div className='flex flex-wrap gap-2'>
+          <Button size='sm' disabled={!isDirty || saving} onClick={handleSave}>
+            {saving ? (
+              <Loader2 className='h-3.5 w-3.5 animate-spin' />
+            ) : (
+              <Save className='h-3.5 w-3.5' />
+            )}
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+          <Button
+            size='sm'
+            variant='destructive'
+            onClick={() => onDelete(invoice)}
+          >
+            <Trash2 className='h-3.5 w-3.5' />
+            Delete
+          </Button>
+        </div>
       </td>
     </tr>
   );
@@ -174,10 +196,31 @@ function InvoiceMetaRow({ invoice }: { invoice: FleetInvoice }) {
 export default function AdminInvoiceListPage() {
   const dispatch = useAppDispatch();
   const { invoices, loading } = useAppSelector((state) => state.invoices);
+  const [query, setQuery] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<FleetInvoice | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const visibleInvoices = useMemo(
+    () => invoices.filter((invoice) => invoiceMatchesQuery(invoice, query)),
+    [invoices, query],
+  );
 
   useEffect(() => {
     dispatch(fetchInvoices());
   }, [dispatch]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await dispatch(deleteInvoice(deleteTarget.id));
+    setDeleting(false);
+    if (deleteInvoice.fulfilled.match(result)) {
+      toast.success('Invoice deleted');
+      setDeleteTarget(null);
+    } else {
+      toast.error((result.payload as string) || 'Failed to delete invoice');
+    }
+  };
 
   // Stats
   const totalGrandTotal = invoices.reduce((s, i) => s + i.grandTotal, 0);
@@ -230,12 +273,26 @@ export default function AdminInvoiceListPage() {
         </div>
       )}
 
+      <div className='relative max-w-md'>
+        <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+        <Input
+          className='pl-9'
+          placeholder='Search by invoice, chalan, or work order number'
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+
       {/* Table */}
       {invoices.length === 0 ? (
         <EmptyState
           title='No invoices found'
           description='No invoices have been created yet.'
         />
+      ) : visibleInvoices.length === 0 ? (
+        <p className='text-sm text-muted-foreground'>
+          No invoices match “{query}”.
+        </p>
       ) : (
         <div className='overflow-x-auto rounded-lg border'>
           <table className='w-full text-sm'>
@@ -274,13 +331,28 @@ export default function AdminInvoiceListPage() {
               </tr>
             </thead>
             <tbody className='divide-y'>
-              {invoices.map((invoice) => (
-                <InvoiceMetaRow key={invoice.id} invoice={invoice} />
+              {visibleInvoices.map((invoice) => (
+                <InvoiceMetaRow
+                  key={invoice.id}
+                  invoice={invoice}
+                  onDelete={setDeleteTarget}
+                />
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <DeleteDialog
+        open={!!deleteTarget}
+        onClose={() => {
+          if (!deleting) setDeleteTarget(null);
+        }}
+        onConfirm={handleDelete}
+        loading={deleting}
+        title={`Delete invoice ${deleteTarget?.invoiceNumber ?? ''}?`}
+        description={INVOICE_DELETE_DESCRIPTION}
+      />
     </div>
   );
 }
