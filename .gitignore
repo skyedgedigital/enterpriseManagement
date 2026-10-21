@@ -15,12 +15,10 @@ dist-ssr
 
 # Environment variables
 .env.*.local
-.env
 
 
 
 # Editor directories and files
-.vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -31,3 +29,4 @@ dist-ssr
 *.sw?
 
 serviceAccountKey.json
+config.bat

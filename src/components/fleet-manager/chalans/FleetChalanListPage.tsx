@@ -161,14 +161,14 @@ export function FleetChalanListPage() {
   }
 
   return (
-    <div className='space-y-6'>
+    <div className="space-y-6">
       <PageHeader
-        title='Fleet chalans'
+        title="Fleet chalans"
         description={`${chalans.length} chalan${chalans.length !== 1 ? 's' : ''} · card view`}
         action={
-          <div className='flex flex-wrap gap-2'>
+          <div className="flex flex-wrap gap-2">
             <Button onClick={() => setFilterDialogOpen(true)}>
-              <FileText className='mr-2 h-4 w-4' />
+              <FileText className="mr-2 h-4 w-4" />
               Filter & Merge Chalans
             </Button>
           </div>
@@ -177,27 +177,27 @@ export function FleetChalanListPage() {
 
       {chalans.length === 0 ? (
         <EmptyState
-          title='No chalans yet'
-          description='Drivers create chalans from the driver app. They will appear here once submitted.'
+          title="No chalans yet"
+          description="Drivers create chalans from the driver app. They will appear here once submitted."
         />
       ) : (
         <>
-          <div className='relative max-w-md'>
-            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className='pl-9'
-              placeholder='Search by number, work order, location, department…'
+              className="pl-9"
+              placeholder="Search by number, work order, location, department…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
 
           {filtered.length === 0 ? (
-            <p className='text-sm text-muted-foreground'>
+            <p className="text-sm text-muted-foreground">
               No chalans match “{query}”.
             </p>
           ) : (
-            <ul className='flex flex-col gap-8'>
+            <ul className="flex flex-col gap-8">
               {filtered.map((c) => (
                 <li key={c.id}>
                   <FleetChalanCard
@@ -229,40 +229,42 @@ export function FleetChalanListPage() {
       )}
 
       {filterDialogOpen ? (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4'>
-          <div className='w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl border bg-background p-6 shadow-2xl'>
-            <div className='flex flex-col gap-2 pb-4 sm:flex-row sm:items-end sm:justify-between'>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl border bg-background p-6 shadow-2xl flex flex-col">
+            <div className="flex flex-col gap-2 pb-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className='text-xl font-semibold'>
+                <h2 className="text-xl font-semibold">
                   Filter chalans for merge
                 </h2>
-                <p className='text-sm text-muted-foreground'>
+                <p className="text-sm text-muted-foreground">
                   Choose a work order and/or engineer, then select rows to merge
                   into an invoice.
                 </p>
               </div>
               <Button
-                variant='ghost'
-                size='sm'
+                variant="ghost"
+                size="sm"
                 onClick={() => setFilterDialogOpen(false)}
               >
                 Close
               </Button>
             </div>
 
-            <div className='space-y-4 px-2 pb-4'>
-              <div className='grid gap-4 md:grid-cols-2'>
+            <div className="space-y-4 px-2 pb-4 flex-1 flex flex-col min-h-0">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Label htmlFor='filter-workorder'>Work order</Label>
+                  <Label htmlFor="filter-workorder" className="mb-1">
+                    Work order
+                  </Label>
                   <Select
                     value={filterWorkOrderId}
                     onValueChange={(value) => setFilterWorkOrderId(value)}
                   >
-                    <SelectTrigger id='filter-workorder' className='w-full'>
-                      <SelectValue placeholder='Any work order' />
+                    <SelectTrigger id="filter-workorder" className="w-full">
+                      <SelectValue placeholder="Any work order" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='any'>Any work order</SelectItem>
+                      <SelectItem value="any">Any work order</SelectItem>
                       {fleetWOs.map((wo) => (
                         <SelectItem key={wo.id} value={wo.id}>
                           {wo.workOrderNumber}
@@ -273,16 +275,18 @@ export function FleetChalanListPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor='filter-engineer'>Engineer</Label>
+                  <Label htmlFor="filter-engineer" className="mb-1">
+                    Engineer
+                  </Label>
                   <Select
                     value={filterEngineerId}
                     onValueChange={(value) => setFilterEngineerId(value)}
                   >
-                    <SelectTrigger id='filter-engineer' className='w-full'>
-                      <SelectValue placeholder='Any engineer' />
+                    <SelectTrigger id="filter-engineer" className="w-full">
+                      <SelectValue placeholder="Any engineer" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='any'>Any engineer</SelectItem>
+                      <SelectItem value="any">Any engineer</SelectItem>
                       {engineers.map((engineer) => (
                         <SelectItem key={engineer.id} value={engineer.id}>
                           {engineer.name}
@@ -293,19 +297,19 @@ export function FleetChalanListPage() {
                 </div>
               </div>
 
-              <div className='rounded-lg border bg-background p-4'>
-                <div className='flex flex-wrap items-center justify-between gap-2'>
+              <div className="rounded-lg border bg-background p-4 flex-1 min-h-0 flex flex-col">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className='text-sm text-muted-foreground'>
+                    <p className="text-sm text-muted-foreground">
                       Matching chalans
                     </p>
-                    <p className='font-medium'>
+                    <p className="font-medium">
                       {filteredByDialog.length} rows
                     </p>
                   </div>
                   <Button
-                    variant='ghost'
-                    size='sm'
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setFilterWorkOrderId('');
                       setFilterEngineerId('');
@@ -317,30 +321,30 @@ export function FleetChalanListPage() {
                 </div>
 
                 {filteredByDialog.length === 0 ? (
-                  <p className='mt-4 text-sm text-muted-foreground'>
+                  <p className="mt-4 text-sm text-muted-foreground">
                     No chalans match the selected filters.
                   </p>
                 ) : (
-                  <div className='mt-4 overflow-x-auto'>
-                    <table className='w-full min-w-175 divide-y'>
+                  <div className="mt-4 overflow-x-auto overflow-y-scroll flex-1 min-h-0">
+                    <table className="w-full min-w-175 divide-y">
                       <thead>
-                        <tr className='text-left text-sm text-muted-foreground'>
-                          <th className='px-3 py-2'>Select</th>
-                          <th className='px-3 py-2'>Chalan</th>
-                          <th className='px-3 py-2'>Work order</th>
-                          <th className='px-3 py-2'>Engineer</th>
-                          <th className='px-3 py-2'>Location</th>
+                        <tr className="text-left text-sm text-muted-foreground">
+                          <th className="px-3 py-2">Select</th>
+                          <th className="px-3 py-2">Chalan</th>
+                          <th className="px-3 py-2">Work order</th>
+                          <th className="px-3 py-2">Engineer</th>
+                          <th className="px-3 py-2">Location</th>
                         </tr>
                       </thead>
-                      <tbody className='divide-y'>
+                      <tbody className="divide-y">
                         {filteredByDialog.map((c) => {
                           const selected = dialogSelectedIds.has(c.id);
                           const engineer = engineers.find(
                             (e) => e.id === c.engineerId,
                           );
                           return (
-                            <tr key={c.id} className='hover:bg-muted/50'>
-                              <td className='px-3 py-2'>
+                            <tr key={c.id} className="hover:bg-muted/50">
+                              <td className="px-3 py-2">
                                 <Checkbox
                                   checked={selected}
                                   onCheckedChange={() =>
@@ -348,16 +352,16 @@ export function FleetChalanListPage() {
                                   }
                                 />
                               </td>
-                              <td className='px-3 py-2 text-sm'>
+                              <td className="px-3 py-2 text-sm">
                                 {c.chalanNumber ?? c.id.slice(0, 8)}
                               </td>
-                              <td className='px-3 py-2 text-sm'>
+                              <td className="px-3 py-2 text-sm">
                                 {woLabel(c.workOrderId)}
                               </td>
-                              <td className='px-3 py-2 text-sm'>
+                              <td className="px-3 py-2 text-sm">
                                 {engineer?.name ?? c.engineerId}
                               </td>
-                              <td className='px-3 py-2 text-sm'>
+                              <td className="px-3 py-2 text-sm">
                                 {c.location ?? '—'}
                               </td>
                             </tr>
@@ -370,9 +374,9 @@ export function FleetChalanListPage() {
               </div>
             </div>
 
-            <div className='flex flex-col gap-2 sm:flex-row sm:justify-end'>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
               <Button
-                variant='outline'
+                variant="outline"
                 onClick={() => setFilterDialogOpen(false)}
               >
                 Cancel
@@ -390,8 +394,8 @@ export function FleetChalanListPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         loading={loading}
-        title='Delete this chalan?'
-        description='This removes the chalan record from the database. Storage files are not removed automatically.'
+        title="Delete this chalan?"
+        description="This removes the chalan record from the database. Storage files are not removed automatically."
       />
     </div>
   );
