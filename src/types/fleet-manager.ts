@@ -160,7 +160,7 @@ export interface InvoiceSummaryByItem {
 
 export interface FleetInvoice {
   id: string;
-  invoiceNumber: string; // e.g. "SE/2024-25/123"
+  invoiceNumber: string; // e.g. "SE/26-27/123"
   invoiceType: InvoiceType;
   chalanIds: string[];
   chalanNumbers: string[];

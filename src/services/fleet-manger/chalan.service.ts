@@ -52,10 +52,9 @@ export function calcPrice(
   return quantity * price;
 }
 
-/** Apply one unit to every line and recompute costing from the work-order item price. */
+/** Reprice each line from its own unit and quantity (hours). */
 export async function repriceChalanItems(
   items: ChalanItem[],
-  unit: string,
 ): Promise<{ items: ChalanItem[]; totalCost: number }> {
   const next: ChalanItem[] = [];
   let totalCost = 0;
@@ -63,14 +62,23 @@ export async function repriceChalanItems(
     const fleetLine = await fleetWorkOrderService.getFleetWorkOrderItemById(
       row.item,
     );
+    const label = row.itemName || row.item;
     if (!fleetLine) {
       throw new Error(
-        `Price not found for item "${row.itemName || row.item}". Unit was not changed.`,
+        `Price not found for item "${label}". That line was not changed.`,
       );
     }
-    const itemCosting = calcPrice(row.hours, fleetLine.itemPrice, unit);
+    const unit = String(row.unit ?? '').trim();
+    if (!unit) {
+      throw new Error(`Select a unit for "${label}".`);
+    }
+    const hours = Number(row.hours);
+    if (!Number.isFinite(hours) || hours < 0) {
+      throw new Error(`Enter a valid quantity for "${label}".`);
+    }
+    const itemCosting = calcPrice(hours, fleetLine.itemPrice, unit);
     totalCost += itemCosting;
-    next.push({ ...row, unit, itemCosting });
+    next.push({ ...row, unit, hours, itemCosting });
   }
   return { items: next, totalCost };
 }

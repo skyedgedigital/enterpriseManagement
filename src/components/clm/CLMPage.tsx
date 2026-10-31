@@ -235,9 +235,14 @@ export function CLMPage() {
           Add employee
         </Button>
       </div>
-      {!workOrderId && (
+      {!workOrderId ? (
         <p className='text-sm text-muted-foreground'>
           Select a work order above to add employees to this period.
+        </p>
+      ) : (
+        <p className='text-sm text-muted-foreground'>
+          Show List keeps last month&apos;s employees on this work order. Add or
+          remove only the people who changed.
         </p>
       )}
 

@@ -30,16 +30,14 @@ export const DUMMY_ENTERPRISE: EnterpriseInfo = {
   vendorCode: CONTRACTOR_VENDOR_CODE,
 };
 
-// ── Invoice year string e.g. "2024-25" ──
-export function getInvoiceYear(): string {
-  const now = new Date();
+// ── Invoice year string e.g. "26-27" (SAP field is too short for 2026-2027) ──
+export function getInvoiceYear(now = new Date()): string {
   const year = now.getFullYear();
   const month = now.getMonth() + 1; // 1-based
-  // Indian FY: April to March
-  if (month >= 4) {
-    return `${year}-${String(year + 1).slice(2)}`;
-  }
-  return `${year - 1}-${String(year).slice(2)}`;
+  // Indian FY: April to March. Both years are two digits: SE/26-27/123
+  const start = month >= 4 ? year : year - 1;
+  const end = start + 1;
+  return `${String(start).slice(-2)}-${String(end).slice(-2)}`;
 }
 
 // ── Full invoice number ──

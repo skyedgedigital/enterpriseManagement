@@ -14,7 +14,7 @@ import {
 
 import { toast } from 'sonner';
 
-import type { Chalan, Engineer } from '@/types';
+import type { Chalan, ChalanItem, Engineer } from '@/types';
 import { cn } from '@/lib/utils';
 import { repriceChalanItems } from '@/services/fleet-manger/chalan.service';
 
@@ -86,15 +86,37 @@ export function FleetChalanCard({
   const [location, setLocation] = useState(chalan.location ?? '');
   const [engineerId, setEngineerId] = useState(chalan.engineerId ?? '');
   const [departmentId, setDepartmentId] = useState(chalan.departmentId ?? '');
-  const [unitChoice, setUnitChoice] = useState('');
+  const [draftItems, setDraftItems] = useState<ChalanItem[]>([]);
   const [engineerRequired, setEngineerRequired] = useState(false);
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [engLoading, setEngLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const canEditDeptAndUnit = !chalan.invoiceCreated;
-  const lineUnits = [...new Set(chalan.items.map((row) => row.unit).filter(Boolean))];
+  const lineUnits = [
+    ...new Set(
+      [...chalan.items, ...draftItems].map((row) => row.unit).filter(Boolean),
+    ),
+  ];
   const unitOptions = [...new Set([...workOrderUnits, ...lineUnits])];
+  const itemRows = editing && draftItems.length > 0 ? draftItems : chalan.items;
+
+  const updateDraftItem = (
+    index: number,
+    patch: Partial<Pick<ChalanItem, 'unit' | 'hours'>>,
+  ) => {
+    setDraftItems((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    );
+  };
+
+  const lineEditsChanged = () =>
+    draftItems.length === chalan.items.length &&
+    draftItems.some(
+      (row, i) =>
+        row.unit !== chalan.items[i]?.unit ||
+        Number(row.hours) !== Number(chalan.items[i]?.hours),
+    );
 
   const loadEngineers = async (
     deptId: string,
@@ -129,7 +151,7 @@ export function FleetChalanCard({
     setLocation(chalan.location ?? '');
     setEngineerId(chalan.engineerId ?? '');
     setDepartmentId(chalan.departmentId ?? '');
-    setUnitChoice(lineUnits.length === 1 ? lineUnits[0] : '');
+    setDraftItems(chalan.items.map((row) => ({ ...row })));
     setEngineerRequired(false);
     await loadEngineers(
       chalan.departmentId,
@@ -143,7 +165,7 @@ export function FleetChalanCard({
     setLocation(chalan.location ?? '');
     setEngineerId(chalan.engineerId ?? '');
     setDepartmentId(chalan.departmentId ?? '');
-    setUnitChoice('');
+    setDraftItems([]);
     setEngineerRequired(false);
   };
 
@@ -175,12 +197,8 @@ export function FleetChalanCard({
         patch.departmentId = departmentId;
       }
 
-      if (
-        canEditDeptAndUnit &&
-        unitChoice &&
-        chalan.items.some((row) => row.unit !== unitChoice)
-      ) {
-        const repriced = await repriceChalanItems(chalan.items, unitChoice);
+      if (canEditDeptAndUnit && lineEditsChanged()) {
+        const repriced = await repriceChalanItems(draftItems);
         patch.items = repriced.items;
         patch.totalCost = repriced.totalCost;
       }
@@ -311,30 +329,10 @@ export function FleetChalanCard({
                 </Select>
               </div>
 
-              <div className='space-y-2'>
-                <Label>Unit for all items</Label>
-                <Select
-                  value={unitChoice || undefined}
-                  onValueChange={setUnitChoice}
-                  disabled={!canEditDeptAndUnit || unitOptions.length === 0}
-                >
-                  <SelectTrigger className='bg-background shadow-sm'>
-                    <SelectValue
-                      placeholder={
-                        lineUnits.length > 1
-                          ? 'Mixed — pick one unit'
-                          : 'Select unit'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unitOptions.map((unit) => (
-                      <SelectItem key={unit} value={unit}>
-                        {unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className='space-y-2 sm:col-span-2'>
+                <p className='text-sm text-muted-foreground'>
+                  Unit and quantity are edited on each line in the table below.
+                </p>
               </div>
 
               <div className='space-y-2'>
@@ -373,8 +371,8 @@ export function FleetChalanCard({
 
             {!canEditDeptAndUnit && (
               <p className='mt-4 text-sm text-muted-foreground'>
-                Department and unit can be changed only before an invoice is
-                created.
+                Department, unit, and quantity can be changed only before an
+                invoice is created.
               </p>
             )}
             {canEditDeptAndUnit && engineerRequired && !engineerId && (
@@ -438,7 +436,7 @@ export function FleetChalanCard({
                 </tr>
               </thead>
               <tbody>
-                {chalan.items.length === 0 ? (
+                {itemRows.length === 0 ? (
                   <tr>
                     <td
                       colSpan={7}
@@ -448,7 +446,7 @@ export function FleetChalanCard({
                     </td>
                   </tr>
                 ) : (
-                  chalan.items.map((row, i) => (
+                  itemRows.map((row, i) => (
                     <tr
                       key={`${row.item}-${i}`}
                       className={cn(
@@ -469,10 +467,49 @@ export function FleetChalanCard({
                         {row.endTime}
                       </td>
                       <td className='whitespace-nowrap px-3 py-2'>
-                        {row.unit}
+                        {editing && canEditDeptAndUnit ? (
+                          <Select
+                            value={row.unit || undefined}
+                            onValueChange={(unit) =>
+                              updateDraftItem(i, { unit })
+                            }
+                            disabled={unitOptions.length === 0}
+                          >
+                            <SelectTrigger className='h-8 w-28 bg-background'>
+                              <SelectValue placeholder='Unit' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {unitOptions.map((unit) => (
+                                <SelectItem key={unit} value={unit}>
+                                  {unit}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          row.unit
+                        )}
                       </td>
                       <td className='whitespace-nowrap px-3 py-2 text-right tabular-nums'>
-                        {row.hours}
+                        {editing && canEditDeptAndUnit ? (
+                          <Input
+                            type='number'
+                            min={0}
+                            step='any'
+                            value={Number.isFinite(row.hours) ? row.hours : ''}
+                            onChange={(e) =>
+                              updateDraftItem(i, {
+                                hours:
+                                  e.target.value === ''
+                                    ? Number.NaN
+                                    : Number(e.target.value),
+                              })
+                            }
+                            className='ml-auto h-8 w-24 bg-background text-right'
+                          />
+                        ) : (
+                          row.hours
+                        )}
                       </td>
                       <td className='whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums'>
                         {formatInr(row.itemCosting)}

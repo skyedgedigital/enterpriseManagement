@@ -9,6 +9,8 @@ import {
   fetchWagesByFilter,
   addWages,
 } from "@/store/slices/wagesSlice";
+import { updateEmployee } from "@/store/slices/employeeSlice";
+import { updateWorkOrder } from "@/store/slices/workOrderSlice";
 import {
   buildWagesPaySlipData,
   generateWagesPaySlip,
@@ -32,8 +34,11 @@ import { getAttendanceSliceForWorkOrder } from "@/lib/attendanceSlice";
 import {
   DEFAULT_WORKING_DAYS,
   computeMissingWagesPairs,
+  employeesToCarryForward,
   periodString,
+  previousPeriod,
   runReport,
+  withWorkOrderPeriod,
 } from "@/lib/clm/helpers";
 import type { Attendance, Employee } from "@/types";
 
@@ -80,13 +85,87 @@ export function useClmReports({
     const existingWages = await dispatch(
       fetchWagesByFilter({ year, month }),
     ).unwrap();
+
+    const period = periodString(month, year);
+    let roster = employees;
+
+    // Remember last month's crew on this work order so only a few people
+    // need to be added or removed for the new month.
+    if (workOrderId && employees.length > 0) {
+      const wo = workOrders.find((w) => w.id === workOrderId);
+      const alreadyCopied = (wo?.crewCopiedPeriods ?? []).includes(period);
+      const prev = previousPeriod(month, year);
+      const toCopy = employeesToCarryForward({
+        employees,
+        workOrderId,
+        period,
+        previousPeriod: prev.period,
+        alreadyCopied,
+      });
+
+      if (!alreadyCopied) {
+        let copied = 0;
+        if (toCopy.length > 0) {
+          const results = await Promise.all(
+            toCopy.map((emp) =>
+              dispatch(
+                updateEmployee({
+                  id: emp.id,
+                  data: {
+                    workOrderHr: withWorkOrderPeriod(emp, period, workOrderId),
+                  },
+                }),
+              ),
+            ),
+          );
+          const copiedIds = new Set<string>();
+          results.forEach((result, index) => {
+            if (result && updateEmployee.fulfilled.match(result)) {
+              copied += 1;
+              copiedIds.add(toCopy[index].id);
+            }
+          });
+          if (copied > 0) {
+            roster = employees.map((emp) =>
+              copiedIds.has(emp.id)
+                ? {
+                    ...emp,
+                    workOrderHr: withWorkOrderPeriod(emp, period, workOrderId),
+                  }
+                : emp,
+            );
+            const people = copied === 1 ? "employee" : "employees";
+            toast.success(
+              `${copied} ${people} from last month are on this work order. Add or remove only the people who changed.`,
+            );
+          }
+          const failed = toCopy.length - copied;
+          if (failed > 0) {
+            toast.error(
+              `${failed} employee${failed === 1 ? "" : "s"} could not be copied from last month.`,
+            );
+          }
+        }
+
+        if (toCopy.length === 0 || copied === toCopy.length) {
+          const copiedPeriods = [...(wo?.crewCopiedPeriods ?? []), period];
+          await dispatch(
+            updateWorkOrder({
+              id: workOrderId,
+              data: { crewCopiedPeriods: copiedPeriods },
+            }),
+          );
+        }
+      }
+    }
+
     onListShown();
 
     const missing = computeMissingWagesPairs({
-      employees,
+      employees: roster,
       existingWages,
       workOrderId,
-      period: periodString(month, year),
+      period,
     });
     if (missing.length === 0) return;
 
@@ -133,6 +212,7 @@ export function useClmReports({
     month,
     workOrderId,
     employees,
+    workOrders,
     designations,
     onListShown,
   ]);

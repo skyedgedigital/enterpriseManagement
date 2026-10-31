@@ -18,6 +18,53 @@ export function periodString(month: number, year: number): string {
   return `${String(month).padStart(2, "0")}-${year}`;
 }
 
+/**
+ * Employees who were on this work order last month and are not on it yet
+ * for `period`. Returns nothing once that month was already copied, so a
+ * later add or remove is not overwritten.
+ */
+export function employeesToCarryForward(args: {
+  employees: Employee[];
+  workOrderId: string;
+  period: string;
+  previousPeriod: string;
+  alreadyCopied: boolean;
+}): Employee[] {
+  const { employees, workOrderId, period, previousPeriod: prev, alreadyCopied } =
+    args;
+  if (!workOrderId || alreadyCopied) return [];
+  return employees.filter((emp) => {
+    const rows = emp.workOrderHr ?? [];
+    const onPrevious = rows.some(
+      (wo) => wo.workOrderHr === workOrderId && wo.period === prev,
+    );
+    const onCurrent = rows.some(
+      (wo) => wo.workOrderHr === workOrderId && wo.period === period,
+    );
+    return onPrevious && !onCurrent;
+  });
+}
+
+/** Roster entry for one work order in one month, leaving an existing row as-is. */
+export function withWorkOrderPeriod(
+  employee: Employee,
+  period: string,
+  workOrderId: string,
+): Employee["workOrderHr"] {
+  const existing = employee.workOrderHr ?? [];
+  if (
+    existing.some(
+      (wo) => wo.period === period && wo.workOrderHr === workOrderId,
+    )
+  ) {
+    return existing;
+  }
+  return [
+    ...existing,
+    { period, workOrderHr: workOrderId, workOrderAtten: 0 },
+  ];
+}
+
 /** Calendar month before `month`/`year`. January wraps to December of the previous year. */
 export function previousPeriod(month: number, year: number): {
   month: number;

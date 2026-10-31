@@ -108,7 +108,7 @@ export const invoiceService = {
     const snap = await getDocs(q);
     if (snap.empty) return 0;
     const latest = snap.docs[0].data() as FleetInvoice;
-    // invoiceNumber format: "SE/2024-25/123"
+    // invoiceNumber format: "SE/26-27/123"
     const parts = latest.invoiceNumber?.split('/');
     const serial = parseInt(parts?.[2] ?? '0', 10);
     return isNaN(serial) ? 0 : serial;

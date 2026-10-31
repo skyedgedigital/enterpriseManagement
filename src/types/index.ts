@@ -205,6 +205,8 @@ export interface WorkOrder {
   lapseTill?: string;
   state?: string; // Indian state/UT full name (for filter/group)
   newPfApplicable?: boolean; // true = PF capped at 15k; false/undefined = PF on full amount
+  /** Periods (MM-YYYY) whose crew was already copied from the previous month. */
+  crewCopiedPeriods?: string[];
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
