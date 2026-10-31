@@ -30,3 +30,8 @@ dist-ssr
 
 serviceAccountKey.json
 config.bat
+/node_modules
+/.env
+.env
+/.codegraph
+.codegraph
